@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.902
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asterism", "Asterism.csproj", "{D25006DE-76B4-4B89-B41C-19DB68A4A197}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {203A6242-C9B7-4403-9871-39909DC285D8}
+	EndGlobalSection
+EndGlobal
