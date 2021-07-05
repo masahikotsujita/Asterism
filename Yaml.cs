@@ -48,29 +48,33 @@ namespace Asterism {
             return new Yaml(childNode);
         }
 
-        public String AsString() {
-            if (this.YamlNode == null) {
-                return null;
+        public String String {
+            get {
+                if (this.YamlNode == null) {
+                    return null;
+                }
+                if (this.YamlNode.NodeType != YamlNodeType.Scalar) {
+                    return null;
+                }
+                return ((YamlScalarNode)YamlNode).Value;
             }
-            if (this.YamlNode.NodeType != YamlNodeType.Scalar) {
-                return null;
-            }
-            return ((YamlScalarNode)YamlNode).Value;
         }
 
-        public IEnumerable<Yaml> AsList() {
-            if (this.YamlNode == null) {
-                return null;
+        public IEnumerable<Yaml> List {
+            get {
+                if (this.YamlNode == null) {
+                    return null;
+                }
+                if (this.YamlNode.NodeType != YamlNodeType.Sequence) {
+                    return null;
+                }
+                var sequenceNode = (YamlSequenceNode)this.YamlNode;
+                var results = new List<Yaml>();
+                foreach (var node in sequenceNode) {
+                    results.Add(new Yaml(node));
+                }
+                return results;
             }
-            if (this.YamlNode.NodeType != YamlNodeType.Sequence) {
-                return null;
-            }
-            var sequenceNode = (YamlSequenceNode)this.YamlNode;
-            var results = new List<Yaml>();
-            foreach (var node in sequenceNode) {
-                results.Add(new Yaml(node));
-            }
-            return results;
         }
 
     }

@@ -19,11 +19,11 @@ namespace Asterism {
             yamlStream.Load(reader);
             var yaml = new Yaml(yamlStream.Documents[0].RootNode);
 
-            this.Name = yaml["name"].AsString();
+            this.Name = yaml["name"].String;
 
             this.Dependencies = yaml["dependencies"]
-                .AsList()
-                ?.Select(yml => yml.AsString());
+                .List
+                ?.Select(yml => yml.String);
 
             Console.WriteLine($"name: {Name}");
             Console.WriteLine($"dependencies:");
