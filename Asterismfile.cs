@@ -25,16 +25,14 @@ namespace Asterism {
                 .List
                 ?.Select(yml => yml.String);
 
-            Console.WriteLine($"name: {Name}");
-            Console.WriteLine($"dependencies:");
-            foreach (var dependency in Dependencies) {
-                Console.WriteLine($"\t- { dependency }");
-            }
+            this.SolutionFilePath = yaml["sln_path"].String;
         }
 
         public String Name { get; }
 
         public IEnumerable<String> Dependencies { get; }
+
+        public String SolutionFilePath { get; }
 
     }
 

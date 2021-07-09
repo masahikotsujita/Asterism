@@ -29,6 +29,10 @@ namespace Asterism {
                 return new Yaml(null);
             }
             var mappingNode = (YamlMappingNode)this.YamlNode;
+            if (!mappingNode.Children.ContainsKey(key))
+            {
+                return new Yaml(null);
+            }
             var childNode = mappingNode.Children[key];
             return new Yaml(childNode);
         }
