@@ -11,15 +11,17 @@ namespace Asterism {
 
         static void Main(string[] args) {
             Parser.Default.ParseArguments<ResolveOptions, object>(args)
-            .WithParsed<ResolveOptions>(options => {
-                var command = new ResolveCommand(options);
-                command.Run();
-            })
-            .WithNotParsed(errors => {
-                foreach (var error in errors) {
-                    Console.WriteLine($"{error}");
-                }
-            });
+                .MapResult(
+                    (ResolveOptions options) => {
+                        var command = new ResolveCommand(options);
+                        return command.Run();
+                    },
+                    errors => {
+                        foreach (var error in errors) {
+                            Console.WriteLine($"{error}");
+                        }
+                        return -1;
+                    });
         }
 
     }
