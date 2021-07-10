@@ -31,7 +31,7 @@ namespace Asterism {
                 var moduleAsterismfilePath = Path.Combine(moduleCheckoutPath, ".asterismfile.yml");
                 var moduleAsterismfile = new Asterismfile(moduleAsterismfilePath);
                 var moduleSolutionFilePath = Path.Combine(moduleCheckoutPath, moduleAsterismfile.SolutionFilePath.Replace('/', '\\'));
-                var buildExitCode = MSBuild.Build(moduleSolutionFilePath, (message) => {
+                var buildExitCode = MsBuildUtility.Build(moduleSolutionFilePath, (message) => {
                     Console.WriteLine(message);
                 });
                 if (buildExitCode != 0) {

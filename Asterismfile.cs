@@ -13,7 +13,7 @@ namespace Asterism {
 
     class Asterismfile {
 
-        public struct Artifact
+        public struct ARTIFACT
         {
             public String Source { get; set; }
             public String Destination { get; set; }
@@ -23,7 +23,7 @@ namespace Asterism {
             var reader = new StreamReader(filePath);
             var yamlStream = new YamlStream();
             yamlStream.Load(reader);
-            var yaml = new Yaml(yamlStream.Documents[0].RootNode);
+            var yaml = new YAML(yamlStream.Documents[0].RootNode);
 
             this.Name = yaml["name"].String;
 
@@ -38,15 +38,15 @@ namespace Asterism {
                 ?.Select(yml => {
                     String source, destination;
                     if ((source = yml["src"].String) != null && (destination = yml["dst"].String) != null) {
-                        return new Artifact {
+                        return new ARTIFACT {
                             Source = source,
                             Destination = destination
-                        } as Artifact?;
+                        } as ARTIFACT?;
                     } else {
                         return null;
                     }
                 })
-                .OfType<Artifact>();
+                .OfType<ARTIFACT>();
         }
 
         public String Name { get; }
@@ -55,7 +55,7 @@ namespace Asterism {
 
         public String SolutionFilePath { get; }
 
-        public IEnumerable<Artifact> Artifacts { get; }
+        public IEnumerable<ARTIFACT> Artifacts { get; }
 
     }
 

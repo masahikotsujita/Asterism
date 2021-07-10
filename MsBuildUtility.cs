@@ -9,7 +9,7 @@ using System.Text.RegularExpressions;
 
 namespace Asterism {
 
-    class MSBuild {
+    class MsBuildUtility {
 
         enum Version {
             VS2012,

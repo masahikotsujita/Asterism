@@ -72,12 +72,12 @@
   <ItemGroup>
     <Compile Include="Asterismfile.cs" />
     <Compile Include="FileUtility.cs" />
-    <Compile Include="MSBuild.cs" />
+    <Compile Include="MsBuildUtility.cs" />
     <Compile Include="ResolveCommand.cs" />
     <Compile Include="ResolveOptions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Yaml.cs" />
+    <Compile Include="YAML.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
