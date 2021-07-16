@@ -13,10 +13,10 @@ namespace Asterism {
 
     class Asterismfile {
 
-        public struct ARTIFACT
+        public struct ARTIFACTS
         {
-            public String Source { get; set; }
-            public String Destination { get; set; }
+            public IEnumerable<String> IncludeHeaders { get; set; }
+            public IEnumerable<String> LinkLibraries { get; set; }
         }
 
         public Asterismfile(String filePath) {
@@ -33,20 +33,14 @@ namespace Asterism {
 
             this.SolutionFilePath = yaml["sln_path"].String;
 
-            this.Artifacts = yaml["artifacts"]
-                .List
-                ?.Select(yml => {
-                    String source, destination;
-                    if ((source = yml["src"].String) != null && (destination = yml["dst"].String) != null) {
-                        return new ARTIFACT {
-                            Source = source,
-                            Destination = destination
-                        } as ARTIFACT?;
-                    } else {
-                        return null;
-                    }
-                })
-                .OfType<ARTIFACT>();
+            var includeHeaders = yaml["artifacts"]["include_headers"].List?.Select(yml => yml.String);
+            var linkLibraries = yaml["artifacts"]["link_libraries"].List?.Select(yml => yml.String);
+            if (includeHeaders != null || linkLibraries != null) {
+                this.Artifacts = new ARTIFACTS {
+                    IncludeHeaders = includeHeaders,
+                    LinkLibraries = linkLibraries
+                };
+            }
         }
 
         public String Name { get; }
@@ -55,7 +49,7 @@ namespace Asterism {
 
         public String SolutionFilePath { get; }
 
-        public IEnumerable<ARTIFACT> Artifacts { get; }
+        public ARTIFACTS? Artifacts { get; }
 
     }
 

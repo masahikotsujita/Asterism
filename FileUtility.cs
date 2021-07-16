@@ -33,6 +33,15 @@ namespace Asterism {
             return path.Replace('/', '\\');
         }
 
+        public static String GetRelativePath(String from, String to) {
+            var fromUri = new Uri(from);
+            var toUri = new Uri(to);
+            var relativeUri = fromUri.MakeRelativeUri(toUri);
+            var relativePath = relativeUri.ToString();
+            relativePath = relativePath.Replace('/', '\\');
+            return relativePath;
+        }
+
     }
     
 }

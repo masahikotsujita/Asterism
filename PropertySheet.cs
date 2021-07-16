@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using System.IO;
 
 namespace Asterism {
 
@@ -49,6 +50,10 @@ namespace Asterism {
                     )
                 )
             );
+            var directory = Path.GetDirectoryName(filePath);
+            if (!Directory.Exists(directory)) {
+                Directory.CreateDirectory(directory);
+            }
             doc.Save(filePath);
         }
 
