@@ -12,15 +12,21 @@ namespace Asterism {
 
         public PropertySheet() {
             UserMacros = new List<KeyValuePair<String, String>>();
+            Configurations = new List<String>();
+            AdditionalDependencies = new Dictionary<String, String>();
+            AdditionalLibraryDirectories = new Dictionary<String, String>();
+            AdditionalIncludeDirectories = new Dictionary<String, String>();
         }
-
+        
         public List<KeyValuePair<String, String>> UserMacros { get; }
 
-        public String AdditionalDependencies { get; set; }
+        public List<String> Configurations { get; }
 
-        public String AdditionalLibraryDirectories { get; set; }
+        public Dictionary<String, String> AdditionalDependencies { get; }
 
-        public String AdditionalIncludeDirectories { get; set; }
+        public Dictionary<String, String> AdditionalLibraryDirectories { get; }
+
+        public Dictionary<String, String> AdditionalIncludeDirectories { get; }
 
         public void Save(String filePath) {
             var ns = XNamespace.Get("http://schemas.microsoft.com/developer/msbuild/2003");
@@ -33,15 +39,16 @@ namespace Asterism {
                         select new XElement(ns + userMacro.Key, userMacro.Value)
                     ),
                     new XElement(ns + "PropertyGroup"),
-                    new XElement(ns + "ItemDefinitionGroup",
-                        new XElement(ns + "Link",
-                            new XElement(ns + "AdditionalDependencies", AdditionalDependencies ?? ""),
-                            new XElement(ns + "AdditionalLibraryDirectories", AdditionalLibraryDirectories ?? "")
+                    from configuration in Configurations
+                    select new XElement(ns + "ItemDefinitionGroup", new XAttribute("Condition", $"'$(Configuration)|$(Platform)'=='{configuration}'"),
+                            new XElement(ns + "Link",
+                                new XElement(ns + "AdditionalDependencies", TryGetValueFromDictionary(AdditionalDependencies, configuration) ?? ""),
+                                new XElement(ns + "AdditionalLibraryDirectories", TryGetValueFromDictionary(AdditionalLibraryDirectories, configuration) ?? "")
+                            ),
+                            new XElement(ns + "ClCompile",
+                                new XElement(ns + "AdditionalIncludeDirectories", TryGetValueFromDictionary(AdditionalIncludeDirectories, configuration) ?? "")
+                            )
                         ),
-                        new XElement(ns + "ClCompile",
-                            new XElement(ns + "AdditionalIncludeDirectories", AdditionalIncludeDirectories ?? "")
-                        )
-                    ),
                     new XElement(ns + "ItemGroup",
                         from userMacro in UserMacros
                         select new XElement(ns + "BuildMacro", new XAttribute("Include", userMacro.Key),
@@ -55,6 +62,15 @@ namespace Asterism {
                 Directory.CreateDirectory(directory);
             }
             doc.Save(filePath);
+        }
+        
+        static String TryGetValueFromDictionary(Dictionary<String, String> dictionary, String key) {
+            String value;
+            if (dictionary.TryGetValue(key, out value)) {
+                return value;
+            } else {
+                return null;
+            }
         }
 
     }

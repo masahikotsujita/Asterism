@@ -22,7 +22,14 @@ namespace Asterism {
             var checkoutDirPath = Path.Combine(asterismDirPath, @"checkout\");
             var artifactsDirPath = Path.Combine(asterismDirPath, @"artifacts\");
 
-            var libraries = new List<String>();
+            var solutionFilePath = Path.Combine(workingDirectoryPath, FileUtility.ReplacePathSeparatorsForWindows(asterismfile.SolutionFilePath));
+            var rootSolutionFile = Microsoft.Build.Construction.SolutionFile.Parse(solutionFilePath);
+            var configurations = rootSolutionFile.SolutionConfigurations;
+
+            var librariesForConfigurations = new Dictionary<String, List<String>>();
+            foreach (var configuration in configurations) {
+                librariesForConfigurations[configuration.FullName] = new List<String>();
+            }
 
             foreach (String dependency in asterismfile.Dependencies) {
 
@@ -43,54 +50,61 @@ namespace Asterism {
                 var moduleAsterismPropsFilePath = Path.Combine(moduleAsterismDirPath, @"vsprops\", "Asterism.props");
 
                 var moduleProps = new PropertySheet();
+                moduleProps.Configurations.AddRange(from configuration in configurations select configuration.FullName);
                 moduleProps.UserMacros.Add(new KeyValuePair<string, string>("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromModuleSolutionDirToArtifactsDir}"));
-                moduleProps.AdditionalIncludeDirectories = $"$(AsterismArtifactsDir)x64\\Debug\\include";
+                foreach (var configuration in configurations) {
+                    moduleProps.AdditionalIncludeDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include";
+                }
                 moduleProps.Save(moduleAsterismPropsFilePath);
 
                 var solutionFile = Microsoft.Build.Construction.SolutionFile.Parse(moduleSolutionFilePath);
-                var buildExitCode = MsBuildUtility.Build(moduleSolutionFilePath, (message) => {
-                    Console.WriteLine(message);
-                });
-                if (buildExitCode != 0) {
-                    return buildExitCode;
+                foreach (var configuration in configurations) {
+                    var buildExitCode = MsBuildUtility.Build(moduleSolutionFilePath, new Dictionary<String, String> { { "Platform", configuration.PlatformName }, { "Configuration", configuration.ConfigurationName } }, (message) => {
+                        Console.WriteLine(message);
+                    });
+                    if (buildExitCode != 0) {
+                        return buildExitCode;
+                    }
                 }
                 
                 if (moduleAsterismfile.Artifacts is Asterismfile.ARTIFACTS artifacts) {
-                    var headerDestination = Path.Combine(artifactsDirPath, @"x64\Debug\include\");
-                    foreach (var headerPattern in artifacts.IncludeHeaders) {
-                        var headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
-                        var xcopyExitCode = FileUtility.XCopy(headerSource, headerDestination, moduleCheckoutPath, (message) => {
-                            Console.WriteLine(message);
-                        });
-                        if (xcopyExitCode != 0) {
-                            return xcopyExitCode;
+                    foreach (var configuration in configurations) {
+                        var headerDestination = Path.Combine(artifactsDirPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
+                        foreach (var headerPattern in artifacts.IncludeHeaders) {
+                            var headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
+                            var xcopyExitCode = FileUtility.XCopy(headerSource, headerDestination, moduleCheckoutPath, (message) => {
+                                Console.WriteLine(message);
+                            });
+                            if (xcopyExitCode != 0) {
+                                return xcopyExitCode;
+                            }
                         }
-                    }
-                    var libDestination = Path.Combine(artifactsDirPath, @"x64\Debug\lib\");
-                    foreach (var libraryPattern in artifacts.LinkLibraries) {
-                        var libSource = FileUtility.ReplacePathSeparatorsForWindows(libraryPattern).Replace("${PLATFORM}", "x64").Replace("${CONFIGURATION}", "Debug");
-                        var lib = Path.GetFileName(libSource);
-                        var xcopyExitCode = FileUtility.XCopy(libSource, libDestination, moduleCheckoutPath, (message) => {
-                            Console.WriteLine(message);
-                        });
-                        if (xcopyExitCode != 0) {
-                            return xcopyExitCode;
+                        var libDestination = Path.Combine(artifactsDirPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\");
+                        foreach (var libraryPattern in artifacts.LinkLibraries) {
+                            var libSource = FileUtility.ReplacePathSeparatorsForWindows(libraryPattern).Replace("${PLATFORM}", configuration.PlatformName).Replace("${CONFIGURATION}", configuration.ConfigurationName);
+                            var lib = Path.GetFileName(libSource);
+                            var xcopyExitCode = FileUtility.XCopy(libSource, libDestination, moduleCheckoutPath, (message) => {
+                                Console.WriteLine(message);
+                            });
+                            if (xcopyExitCode != 0) {
+                                return xcopyExitCode;
+                            }
+                            librariesForConfigurations[configuration.FullName].Add(lib);
                         }
-                        libraries.Add(lib);
                     }
                 }
             }
 
-            var solutionFilePath = Path.Combine(workingDirectoryPath, FileUtility.ReplacePathSeparatorsForWindows(asterismfile.SolutionFilePath));
             var relativePathFromSolutionDirToArtifactsDir = FileUtility.GetRelativePath(solutionFilePath, artifactsDirPath);
-
-            var additionalDependencies = String.Join(";", libraries.ToArray());
-
             var rootProps = new PropertySheet();
+            rootProps.Configurations.AddRange(from configuration in configurations select configuration.FullName);
             rootProps.UserMacros.Add(new KeyValuePair<string, string>("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromSolutionDirToArtifactsDir}"));
-            rootProps.AdditionalDependencies = additionalDependencies;
-            rootProps.AdditionalLibraryDirectories = @"$(AsterismArtifactsDir)x64\Debug\lib\";
-            rootProps.AdditionalIncludeDirectories = @"$(AsterismArtifactsDir)x64\Debug\include\";
+            foreach (var configuration in configurations) {
+                var additionalDependencies = String.Join(";", librariesForConfigurations[configuration.FullName].ToArray());
+                rootProps.AdditionalDependencies[configuration.FullName] = additionalDependencies;
+                rootProps.AdditionalLibraryDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\";
+                rootProps.AdditionalIncludeDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\";
+            }
             var propsFilePath = Path.Combine(asterismDirPath, "vsprops", "Asterism.props");
             rootProps.Save(propsFilePath);
 

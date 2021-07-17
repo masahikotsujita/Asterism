@@ -28,13 +28,19 @@ namespace Asterism {
         private static readonly String MSBUILD_PATH_2019_PROFESSIONAL   = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe";
         private static readonly String MSBUILD_PATH_2019_ENTERPRISE     = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe";
 
-        public static int Build(String slnFilePath, Action<String> outputHandler) {
+        public static int Build(String slnFilePath, Dictionary<String, String> properties, Action<String> outputHandler) {
             if (GetVersionForSolution(slnFilePath) is Version version) {
                 String msBuildPath;
                 if ((msBuildPath = GetAvailableMSBuildPathForVersion(version)) != null) {
+
+                    var arguments = $"\"{slnFilePath}\"";
+                    if (properties != null && properties.Count > 0) {
+                        arguments += " /property:" + String.Join(";", from property in properties
+                                                                      select $"{property.Key}={property.Value}");
+                    }
                     var process = new Process() {
                         StartInfo = new ProcessStartInfo(msBuildPath) {
-                            Arguments = $"\"{slnFilePath}\"",
+                            Arguments = arguments,
                             UseShellExecute = false,
                             RedirectStandardOutput = true,
                             CreateNoWindow = true
