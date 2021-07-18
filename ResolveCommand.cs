@@ -24,8 +24,9 @@ namespace Asterism {
 
             var solutionFilePath = Path.Combine(workingDirectoryPath, FileUtility.ReplacePathSeparatorsForWindows(asterismfile.SolutionFilePath));
             var rootSolutionFile = Microsoft.Build.Construction.SolutionFile.Parse(solutionFilePath);
-            var configurations = rootSolutionFile.SolutionConfigurations;
-
+            var configurations = from configuration in rootSolutionFile.SolutionConfigurations
+                                 where ShouldBuildPlatformConfiguration(configuration.PlatformName, configuration.ConfigurationName)
+                                 select configuration;
             var librariesForConfigurations = new Dictionary<String, List<String>>();
             foreach (var configuration in configurations) {
                 librariesForConfigurations[configuration.FullName] = new List<String>();
@@ -112,6 +113,24 @@ namespace Asterism {
         }
         
         public ResolveOptions Options { get; }
+
+        bool ShouldBuildPlatform(String platformName) {
+            if (Options.Platforms == null) {
+                return true;
+            }
+            return Options.Platforms.Contains(platformName);
+        }
+
+        bool ShouldBuildConfiguration(String configurationName) {
+            if (Options.Configurations == null) {
+                return true;
+            }
+            return Options.Configurations.Contains(configurationName);
+        }
+
+        bool ShouldBuildPlatformConfiguration(String platformName, String configurationName) {
+            return ShouldBuildPlatform(platformName) && ShouldBuildConfiguration(configurationName);
+        }
 
     }
 
