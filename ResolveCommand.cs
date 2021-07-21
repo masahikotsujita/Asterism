@@ -46,7 +46,7 @@ namespace Asterism {
 
                 var moduleSolutionFilePath = Path.Combine(moduleCheckoutPath, FileUtility.ReplacePathSeparatorsForWindows(moduleAsterismfile.SolutionFilePath));
                 var relativePathFromModuleSolutionDirToArtifactsDir = FileUtility.GetRelativePath(moduleSolutionFilePath, artifactsDirPath);
-
+                
                 var moduleAsterismDirPath = Path.Combine(moduleCheckoutPath, @".asterism\");
                 var moduleAsterismPropsFilePath = Path.Combine(moduleAsterismDirPath, @"vsprops\", "Asterism.props");
 
@@ -66,10 +66,10 @@ namespace Asterism {
                     if (buildExitCode != 0) {
                         return buildExitCode;
                     }
-                }
-                
+            }
+
                 if (moduleAsterismfile.Artifacts is Asterismfile.ARTIFACTS artifacts) {
-                    foreach (var configuration in configurations) {
+                foreach (var configuration in configurations) {
                         var headerDestination = Path.Combine(artifactsDirPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
                         foreach (var headerPattern in artifacts.IncludeHeaders) {
                             var headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
@@ -115,14 +115,14 @@ namespace Asterism {
         public ResolveOptions Options { get; }
 
         bool ShouldBuildPlatform(String platformName) {
-            if (Options.Platforms == null) {
+            if (!Options.Platforms.Any()) {
                 return true;
             }
             return Options.Platforms.Contains(platformName);
         }
 
         bool ShouldBuildConfiguration(String configurationName) {
-            if (Options.Configurations == null) {
+            if (!Options.Configurations.Any()) {
                 return true;
             }
             return Options.Configurations.Contains(configurationName);
