@@ -73,6 +73,7 @@
   <ItemGroup>
     <Compile Include="Asterismfile.cs" />
     <Compile Include="FileUtility.cs" />
+    <Compile Include="Module.cs" />
     <Compile Include="MsBuildUtility.cs" />
     <Compile Include="PropertySheet.cs" />
     <Compile Include="ResolveCommand.cs" />
