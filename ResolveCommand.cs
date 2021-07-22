@@ -17,13 +17,11 @@ namespace Asterism {
         public int Run() {
             var workingDirectoryPath = Directory.GetCurrentDirectory();
 
+            var context = new Context(workingDirectoryPath);
+
             var modules = new List<Module>();
-            var rootModule = new Module(workingDirectoryPath);
 
-            var checkoutDirPath = Path.Combine(rootModule.AsterismDirectoryPath, @"checkout\");
-            var artifactsDirPath = Path.Combine(rootModule.AsterismDirectoryPath, @"artifacts\");
-            rootModule.ArtifactsDirectoryPath = artifactsDirPath;
-
+            var rootModule = new Module(context, workingDirectoryPath);
             rootModule.LoadAsterismfile();
             rootModule.LoadSolutionFile();
 
@@ -41,12 +39,11 @@ namespace Asterism {
 
                 var gitPath = $"https://github.com/{dependency}.git";
 
-                var moduleCheckoutPath = Path.Combine(checkoutDirPath, moduleName);
+                var moduleCheckoutPath = Path.Combine(context.CheckoutDirectoryPath, moduleName);
                 
                 var module = Directory.Exists(moduleCheckoutPath) ?
-                    new Module(moduleCheckoutPath) :
-                    Module.Clone(gitPath, moduleCheckoutPath);
-                module.ArtifactsDirectoryPath = artifactsDirPath;
+                    new Module(context, moduleCheckoutPath) :
+                    Module.Clone(context, gitPath, moduleCheckoutPath);
                 module.LoadAsterismfile();
                 module.LoadSolutionFile();
                 module.CreatePropertySheet(false, null);

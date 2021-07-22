@@ -9,17 +9,18 @@ namespace Asterism {
     
     internal class Module {
     
-        public Module(string checkoutDirectoryPath) {
+        public Module(Context context, string checkoutDirectoryPath) {
+            Context = context;
             CheckoutDirectoryPath = checkoutDirectoryPath;
         }
+
+        public Context Context { get; }
     
         public string CheckoutDirectoryPath { get; }
     
         public string AsterismDirectoryPath {
             get { return Path.Combine(CheckoutDirectoryPath, ".asterism\\"); }
         }
-    
-        public string ArtifactsDirectoryPath { get; set; }
     
         public string AsterismfilePath {
             get { return Path.Combine(CheckoutDirectoryPath, ".asterismfile.yml"); }
@@ -31,9 +32,9 @@ namespace Asterism {
     
         public SolutionFile SolutionFile { get; private set; }
     
-        public static Module Clone(string gitPath, string checkoutDirectoryPath) {
+        public static Module Clone(Context context, string gitPath, string checkoutDirectoryPath) {
             Repository.Clone(gitPath, checkoutDirectoryPath);
-            return new Module(checkoutDirectoryPath);
+            return new Module(context, checkoutDirectoryPath);
         }
     
         public void LoadAsterismfile() {
@@ -48,7 +49,7 @@ namespace Asterism {
     
         public void CreatePropertySheet(bool forApplication, Dictionary<string, List<string>> librariesForConfigurations) {
             var configurations = SolutionFile.SolutionConfigurations;
-            string relativePathFromSlnToArtifactsDir = FileUtility.GetRelativePath(SolutionFilePath, ArtifactsDirectoryPath);
+            string relativePathFromSlnToArtifactsDir = FileUtility.GetRelativePath(SolutionFilePath, Context.ArtifactsDirectoryPath);
             string propertySheetPath = Path.Combine(AsterismDirectoryPath, "vsprops\\Asterism.props");
             var propertySheet = new PropertySheet();
             propertySheet.Configurations.AddRange(from configuration in configurations
@@ -77,7 +78,7 @@ namespace Asterism {
             }
     
             if (Asterismfile.Artifacts is Asterismfile.ARTIFACTS artifacts) {
-                string headerDestination = Path.Combine(ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
+                string headerDestination = Path.Combine(Context.ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
                 foreach (string headerPattern in artifacts.IncludeHeaders) {
                     string headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
                     int xcopyExitCode = FileUtility.XCopy(headerSource, headerDestination, CheckoutDirectoryPath, message => { Console.WriteLine(message); });
@@ -86,7 +87,7 @@ namespace Asterism {
                     }
                 }
     
-                string libDestination = Path.Combine(ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\");
+                string libDestination = Path.Combine(Context.ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\");
                 foreach (string libraryPattern in artifacts.LinkLibraries) {
                     string libSource = FileUtility.ReplacePathSeparatorsForWindows(libraryPattern).Replace("${PLATFORM}", configuration.PlatformName).Replace("${CONFIGURATION}", configuration.ConfigurationName);
                     string lib = Path.GetFileName(libSource);
@@ -94,7 +95,7 @@ namespace Asterism {
                     if (xcopyExitCode != 0) {
                         return false;
                     }
-    
+
                     librariesToBeLinked.Add(lib);
                 }
             }
