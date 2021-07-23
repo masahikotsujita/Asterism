@@ -23,16 +23,7 @@ namespace Asterism {
 
             var rootModule = new Module(context, workingDirectoryPath);
             rootModule.LoadAsterismfile();
-            rootModule.LoadSolutionFile();
-
-            var configurations = from c in rootModule.SolutionFile.SolutionConfigurations
-                                 where ShouldBuildPlatformConfiguration(c.PlatformName, c.ConfigurationName)
-                                 select c;
-            var librariesForConfigurations = new Dictionary<String, List<String>>();
-            foreach (var configuration in configurations) {
-                librariesForConfigurations[configuration.FullName] = new List<String>();
-            }
-
+            
             foreach (String dependency in rootModule.Asterismfile.Dependencies) {
 
                 var moduleName = dependency.Split('/')[1];
@@ -45,24 +36,30 @@ namespace Asterism {
                     new Module(context, moduleCheckoutPath) :
                     Module.Clone(context, gitPath, moduleCheckoutPath);
                 module.LoadAsterismfile();
-                module.LoadSolutionFile();
-                module.CreatePropertySheet(false, null);
-
+                
                 modules.Add(module);
             }
-            modules.Add(rootModule);
+
+            rootModule.LoadSolutionFile();
+            var configurations = from c in rootModule.SolutionFile.SolutionConfigurations
+                                 where ShouldBuildPlatformConfiguration(c.PlatformName, c.ConfigurationName)
+                                 select c;
+            var librariesForConfigurations = new Dictionary<String, List<String>>();
+            foreach (var configuration in configurations) {
+                librariesForConfigurations[configuration.FullName] = new List<String>();
+            }
 
             foreach (var module in modules) {
-                if (module != rootModule) {
-                    foreach (var configuration in configurations) {
-                        List<String> libraries = librariesForConfigurations[configuration.FullName];
-                        if (!module.Build(configuration, ref libraries)) {
-                            return 1;
-                        }
+                module.LoadSolutionFile();
+                module.CreatePropertySheet(false, null);
+                foreach (var configuration in configurations) {
+                    List<String> libraries = librariesForConfigurations[configuration.FullName];
+                    if (!module.Build(configuration, ref libraries)) {
+                        return 1;
                     }
                 }
             }
-
+            
             rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
             return 0;
