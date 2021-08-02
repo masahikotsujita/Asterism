@@ -9,12 +9,15 @@ namespace Asterism {
     
     internal class Module {
     
-        public Module(Context context, string checkoutDirectoryPath) {
+        public Module(Context context, string name, string checkoutDirectoryPath) {
             Context = context;
+            Name = name;
             CheckoutDirectoryPath = checkoutDirectoryPath;
         }
 
         public Context Context { get; }
+
+        public string Name { get; }
     
         public string CheckoutDirectoryPath { get; }
     
@@ -32,9 +35,9 @@ namespace Asterism {
     
         public SolutionFile SolutionFile { get; private set; }
     
-        public static Module Clone(Context context, string gitPath, string checkoutDirectoryPath) {
+        public static Module Clone(Context context, string name, string gitPath, string checkoutDirectoryPath) {
             Repository.Clone(gitPath, checkoutDirectoryPath);
-            return new Module(context, checkoutDirectoryPath);
+            return new Module(context, name, checkoutDirectoryPath);
         }
     
         public void LoadAsterismfile() {
