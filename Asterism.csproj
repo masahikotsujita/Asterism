@@ -75,6 +75,7 @@
     <Compile Include="Context.cs" />
     <Compile Include="FileUtility.cs" />
     <Compile Include="Module.cs" />
+    <Compile Include="ModuleGraph.cs" />
     <Compile Include="MsBuildUtility.cs" />
     <Compile Include="PropertySheet.cs" />
     <Compile Include="ResolveCommand.cs" />
