@@ -13,6 +13,11 @@ namespace Asterism {
 
     class Asterismfile {
 
+        public struct DEPENDENCY {
+            public string Project { get; set; }
+            public string Version { get; set; }
+        }
+
         public struct ARTIFACTS
         {
             public IEnumerable<String> IncludeHeaders { get; set; }
@@ -29,7 +34,10 @@ namespace Asterism {
 
             this.Dependencies = yaml["dependencies"]
                 .List
-                ?.Select(yml => yml.String);
+                ?.Select(yml => new DEPENDENCY {
+                    Project = yml["project"].String,
+                    Version = yml["version"].String
+                });
 
             this.SolutionFilePath = yaml["sln_path"].String;
 
@@ -45,7 +53,7 @@ namespace Asterism {
 
         public String Name { get; }
 
-        public IEnumerable<String> Dependencies { get; }
+        public IEnumerable<DEPENDENCY> Dependencies { get; }
 
         public String SolutionFilePath { get; }
 

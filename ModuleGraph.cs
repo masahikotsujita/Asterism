@@ -28,9 +28,9 @@ namespace Asterism {
                 modulesForNames[module.Name] = module;
                 if (module.Asterismfile.Dependencies != null) {
                     foreach (var dependency in module.Asterismfile.Dependencies) {
-                        var submoduleName = dependency.Split('/')[1];
+                        var submoduleName = dependency.Project.Split('/')[1];
                         if (!modulesForNames.ContainsKey(submoduleName)) {
-                            var gitPath = $"https://github.com/{dependency}.git";
+                            var gitPath = $"https://github.com/{dependency.Project}.git";
 
                             var submoduleCheckoutPath = Path.Combine(Context.CheckoutDirectoryPath, submoduleName);
 
@@ -55,7 +55,7 @@ namespace Asterism {
             foreach (var moduleForName in modulesForNames) {
                 if (moduleForName.Value.Asterismfile.Dependencies != null) {
                     foreach (var dependency in moduleForName.Value.Asterismfile.Dependencies) {
-                        var moduleName = dependency.Split('/')[1];
+                        var moduleName = dependency.Project.Split('/')[1];
                         graph[moduleName].Add(moduleForName.Key);
                     }
                 }
