@@ -1,7 +1,10 @@
-﻿using System.CodeDom;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LibGit2Sharp;
+using SemanticVersioning;
+using Version = SemanticVersioning.Version;
 
 namespace Asterism {
 
@@ -28,15 +31,22 @@ namespace Asterism {
                 modulesForNames[module.Name] = module;
                 if (module.Asterismfile.Dependencies != null) {
                     foreach (var dependency in module.Asterismfile.Dependencies) {
-                        var submoduleName = dependency.Project.Split('/')[1];
+                        var submoduleName = GetModuleNameFromProject(dependency.Project);
                         if (!modulesForNames.ContainsKey(submoduleName)) {
                             var gitPath = $"https://github.com/{dependency.Project}.git";
 
                             var submoduleCheckoutPath = Path.Combine(Context.CheckoutDirectoryPath, submoduleName);
 
-                            var submodule = Directory.Exists(submoduleCheckoutPath) ?
-                                new Module(Context, submoduleName, submoduleCheckoutPath) :
-                                Module.Clone(Context, submoduleName, gitPath, submoduleCheckoutPath);
+                            if (Directory.Exists(submoduleCheckoutPath)) {
+                                var repository = new Repository(submoduleCheckoutPath);
+                                var remote = repository.Network.Remotes["origin"];
+                                var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+                                Commands.Fetch(repository, remote.Name, refSpecs, null, "");
+                            } else {
+                                Repository.Clone(gitPath, submoduleCheckoutPath);
+                            }
+
+                            var submodule = new Module(Context, submoduleName, submoduleCheckoutPath);
                             submodule.LoadAsterismfile();
                             GetDependenciesInternal(submodule);
                         }
@@ -55,7 +65,7 @@ namespace Asterism {
             foreach (var moduleForName in modulesForNames) {
                 if (moduleForName.Value.Asterismfile.Dependencies != null) {
                     foreach (var dependency in moduleForName.Value.Asterismfile.Dependencies) {
-                        var moduleName = dependency.Project.Split('/')[1];
+                        var moduleName = GetModuleNameFromProject(dependency.Project);
                         graph[moduleName].Add(moduleForName.Key);
                     }
                 }
@@ -98,6 +108,54 @@ namespace Asterism {
             l.Reverse();
 
             return workGraph.Count > 0 ? null : l;
+        }
+
+        public bool ResolveVersions() {
+            var modules = SortedModules.ToList();
+            var rangesForModuleNames = new Dictionary<string, List<Range>>();
+            foreach (var module in modules) {
+                rangesForModuleNames[module.Name] = new List<Range>();
+            }
+            foreach (var module in modules) {
+                if (module.Asterismfile.Dependencies != null) {
+                    foreach (var dependency in module.Asterismfile.Dependencies) {
+                        var moduleName = GetModuleNameFromProject(dependency.Project);
+                        var range = new Range(dependency.Version);
+                        rangesForModuleNames[moduleName].Add(range);
+                    }
+                }
+            }
+            foreach (var module in modules) {
+                if (module != RootModule) {
+                    var selectedTag = module.Repository.Tags
+                                            .Select(tag => new Tuple<Tag, Version>(tag, Version.TryParse(tag.FriendlyName, out var version) ? version : null))
+                                            .Where(tuple => tuple.Item2 != null)
+                                            .Where(tuple => {
+                                                var success = true;
+                                                foreach (var range in rangesForModuleNames[module.Name]) {
+                                                    if (!range.IsSatisfied(tuple.Item2)) {
+                                                        success = false;
+                                                    }
+                                                }
+                                                return success;
+                                            })
+                                            .OrderBy(tuple => tuple.Item2)
+                                            .Select(tuple => tuple.Item1)
+                                            .LastOrDefault();
+                    if (selectedTag != null) {
+                        if (module.Repository.Head.Tip.Sha != selectedTag.Target.Sha) {
+                            Commands.Checkout(module.Repository, selectedTag.CanonicalName);
+                        }
+                    } else {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        static string GetModuleNameFromProject(string project) {
+            return project.Split('/')[1];
         }
 
     }

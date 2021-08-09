@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.IO;
 using System.Threading.Tasks;
-using LibGit2Sharp;
 
 namespace Asterism {
 
@@ -25,6 +24,9 @@ namespace Asterism {
 
             var graph = new ModuleGraph(context, rootModule);
             graph.LoadDependencies();
+            if (!graph.ResolveVersions()) {
+                return 1;
+            }
             var modules = from module in graph.SortedModules
                           where module != rootModule
                           select module;

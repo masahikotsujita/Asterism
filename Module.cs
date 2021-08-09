@@ -13,6 +13,7 @@ namespace Asterism {
             Context = context;
             Name = name;
             CheckoutDirectoryPath = checkoutDirectoryPath;
+            Repository = new Repository(CheckoutDirectoryPath);
         }
 
         public Context Context { get; }
@@ -20,6 +21,8 @@ namespace Asterism {
         public string Name { get; }
     
         public string CheckoutDirectoryPath { get; }
+
+        public Repository Repository { get; }
     
         public string AsterismDirectoryPath {
             get { return Path.Combine(CheckoutDirectoryPath, ".asterism\\"); }
@@ -34,11 +37,6 @@ namespace Asterism {
         public string SolutionFilePath { get; private set; }
     
         public SolutionFile SolutionFile { get; private set; }
-    
-        public static Module Clone(Context context, string name, string gitPath, string checkoutDirectoryPath) {
-            Repository.Clone(gitPath, checkoutDirectoryPath);
-            return new Module(context, name, checkoutDirectoryPath);
-        }
     
         public void LoadAsterismfile() {
             Asterismfile = new Asterismfile(AsterismfilePath);
@@ -105,7 +103,7 @@ namespace Asterism {
     
             return true;
         }
-    
+
     }
 
 }
