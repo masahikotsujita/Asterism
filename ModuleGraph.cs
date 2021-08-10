@@ -128,19 +128,19 @@ namespace Asterism {
             foreach (var module in modules) {
                 if (module != RootModule) {
                     var selectedTag = module.Repository.Tags
-                                            .Select(tag => new Tuple<Tag, Version>(tag, Version.TryParse(tag.FriendlyName, out var version) ? version : null))
-                                            .Where(tuple => tuple.Item2 != null)
+                                            .Select<Tag, (Tag Tag, Version Version)>(tag => (tag, Version.TryParse(tag.FriendlyName, out var version) ? version : null))
+                                            .Where(tuple => tuple.Version != null)
                                             .Where(tuple => {
                                                 var success = true;
                                                 foreach (var range in rangesForModuleNames[module.Name]) {
-                                                    if (!range.IsSatisfied(tuple.Item2)) {
+                                                    if (!range.IsSatisfied(tuple.Version)) {
                                                         success = false;
                                                     }
                                                 }
                                                 return success;
                                             })
-                                            .OrderBy(tuple => tuple.Item2)
-                                            .Select(tuple => tuple.Item1)
+                                            .OrderBy(tuple => tuple.Version)
+                                            .Select(tuple => tuple.Tag)
                                             .LastOrDefault();
                     if (selectedTag != null) {
                         if (module.Repository.Head.Tip.Sha != selectedTag.Target.Sha) {
