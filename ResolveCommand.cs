@@ -23,13 +23,11 @@ namespace Asterism {
             rootModule.LoadAsterismfile();
 
             var graph = new ModuleGraph(context, rootModule);
-            graph.LoadDependencies();
-            if (!graph.ResolveVersions()) {
+            var allModules = graph.ResolveVersions();
+            if (allModules == null) {
                 return 1;
             }
-            var modules = from module in graph.SortedModules
-                          where module != rootModule
-                          select module;
+            var modules = allModules.Where(x => x != rootModule);
 
             rootModule.LoadSolutionFile();
             var configurations = from c in rootModule.SolutionFile.SolutionConfigurations
