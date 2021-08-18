@@ -28,7 +28,7 @@ namespace Asterism {
             var reader = new StreamReader(filePath);
             var yamlStream = new YamlStream();
             yamlStream.Load(reader);
-            var yaml = new YAML(yamlStream.Documents[0].RootNode);
+            var yaml = new Yaml(yamlStream.Documents[0].RootNode);
 
             this.Name = yaml["name"].String;
 

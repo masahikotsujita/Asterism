@@ -5,51 +5,51 @@ using YamlDotNet.RepresentationModel;
 
 namespace Asterism {
 
-    struct YAML {
+    struct Yaml {
 
-        public YAML(YamlNode yamlNode) {
+        public Yaml(YamlNode yamlNode) {
             this.YamlNode = yamlNode;
         }
 
         private YamlNode YamlNode { get; }
 
-        public YAML this[String key] {
+        public Yaml this[String key] {
             get => GetNodeForKey(key);
         }
 
-        public YAML this[int index] {
+        public Yaml this[int index] {
             get => GetNodeAtIndex(index);
         }
 
-        public YAML GetNodeForKey(String key) {
+        public Yaml GetNodeForKey(String key) {
             if (this.YamlNode == null) {
-                return new YAML(null);
+                return new Yaml(null);
             }
             if (this.YamlNode.NodeType != YamlNodeType.Mapping) {
-                return new YAML(null);
+                return new Yaml(null);
             }
             var mappingNode = (YamlMappingNode)this.YamlNode;
             if (!mappingNode.Children.ContainsKey(key))
             {
-                return new YAML(null);
+                return new Yaml(null);
             }
             var childNode = mappingNode.Children[key];
-            return new YAML(childNode);
+            return new Yaml(childNode);
         }
 
-        public YAML GetNodeAtIndex(int index) {
+        public Yaml GetNodeAtIndex(int index) {
             if (this.YamlNode == null) {
-                return new YAML(null);
+                return new Yaml(null);
             }
             if (this.YamlNode.NodeType != YamlNodeType.Sequence) {
-                return new YAML(null);
+                return new Yaml(null);
             }
             var sequenceNode = (YamlSequenceNode)this.YamlNode;
             if (index >= sequenceNode.Count()) {
-                return new YAML(null);
+                return new Yaml(null);
             }
             var childNode = sequenceNode.Children[index];
-            return new YAML(childNode);
+            return new Yaml(childNode);
         }
 
         public String String {
@@ -64,7 +64,7 @@ namespace Asterism {
             }
         }
 
-        public IEnumerable<YAML> List {
+        public IEnumerable<Yaml> List {
             get {
                 if (this.YamlNode == null) {
                     return null;
@@ -73,9 +73,9 @@ namespace Asterism {
                     return null;
                 }
                 var sequenceNode = (YamlSequenceNode)this.YamlNode;
-                var results = new List<YAML>();
+                var results = new List<Yaml>();
                 foreach (var node in sequenceNode) {
-                    results.Add(new YAML(node));
+                    results.Add(new Yaml(node));
                 }
                 return results;
             }
