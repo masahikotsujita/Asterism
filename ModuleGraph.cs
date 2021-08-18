@@ -14,8 +14,8 @@ namespace Asterism {
         public ModuleGraph(Context context, Module rootModule) {
             Context = context;
             RootModule = rootModule;
-            Caches = new Dictionary<string, MODULE_INFO> {
-                [RootModule.Name] = new MODULE_INFO {
+            Caches = new Dictionary<string, ModuleInfo> {
+                [RootModule.Name] = new ModuleInfo {
                     Module = rootModule,
                     IsFetched = true
                 }
@@ -26,12 +26,12 @@ namespace Asterism {
         
         public Module RootModule { get; }
 
-        struct MODULE_INFO {
+        struct ModuleInfo {
             public Module Module { get; set; }
             public bool IsFetched { get; set; }
         }
 
-        private Dictionary<string, MODULE_INFO> Caches { get; set; }
+        private Dictionary<string, ModuleInfo> Caches { get; set; }
         
         public IEnumerable<Module> ResolveVersions() {
             while (true) {
@@ -101,7 +101,7 @@ namespace Asterism {
                         var githubPath = $"https://github.com/{dependency.Project}.git";
                         Repository.Clone(githubPath, moduleCheckoutPath);
                     }
-                    moduleInfo = new MODULE_INFO {
+                    moduleInfo = new ModuleInfo {
                         Module = new Module(Context, moduleName, moduleCheckoutPath),
                         IsFetched = false
                     };
