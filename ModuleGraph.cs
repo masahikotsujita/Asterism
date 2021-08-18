@@ -92,7 +92,7 @@ namespace Asterism {
 
         private IEnumerable<string> GetDependenciesRecursively() {
             var result = new List<string> { RootModule.Name };
-            void GetDependency(DEPENDENCY dependency) {
+            void GetDependency(DependencyInfo dependency) {
                 var moduleName = GetModuleNameFromProject(dependency.Project);
                 result.Add(moduleName);
                 if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {

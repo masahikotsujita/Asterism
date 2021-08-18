@@ -11,12 +11,12 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Asterism {
 
-    public struct DEPENDENCY {
+    public struct DependencyInfo {
         public string Project { get; set; }
         public string Version { get; set; }
     }
     
-    public struct ARTIFACTS {
+    public struct ArtifactsInfo {
         public IEnumerable<String> IncludeHeaders { get; set; }
         public IEnumerable<String> LinkLibraries { get; set; }
     }
@@ -33,7 +33,7 @@ namespace Asterism {
 
             this.Dependencies = yaml["dependencies"]
                 .List
-                ?.Select(yml => new DEPENDENCY {
+                ?.Select(yml => new DependencyInfo {
                     Project = yml["project"].String,
                     Version = yml["version"].String
                 });
@@ -43,7 +43,7 @@ namespace Asterism {
             var includeHeaders = yaml["artifacts"]["include_headers"].List?.Select(yml => yml.String);
             var linkLibraries = yaml["artifacts"]["link_libraries"].List?.Select(yml => yml.String);
             if (includeHeaders != null || linkLibraries != null) {
-                this.Artifacts = new ARTIFACTS {
+                this.ArtifactsInfo = new ArtifactsInfo {
                     IncludeHeaders = includeHeaders,
                     LinkLibraries = linkLibraries
                 };
@@ -52,11 +52,11 @@ namespace Asterism {
 
         public String Name { get; }
 
-        public IEnumerable<DEPENDENCY> Dependencies { get; }
+        public IEnumerable<DependencyInfo> Dependencies { get; }
 
         public String SolutionFilePath { get; }
 
-        public ARTIFACTS? Artifacts { get; }
+        public ArtifactsInfo? ArtifactsInfo { get; }
 
     }
 

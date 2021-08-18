@@ -78,7 +78,7 @@ namespace Asterism {
                 return false;
             }
     
-            if (Asterismfile.Artifacts is ARTIFACTS artifacts) {
+            if (Asterismfile.ArtifactsInfo is ArtifactsInfo artifacts) {
                 string headerDestination = Path.Combine(Context.ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
                 foreach (string headerPattern in artifacts.IncludeHeaders) {
                     string headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
