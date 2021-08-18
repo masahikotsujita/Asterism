@@ -11,18 +11,17 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Asterism {
 
+    public struct DEPENDENCY {
+        public string Project { get; set; }
+        public string Version { get; set; }
+    }
+    
+    public struct ARTIFACTS {
+        public IEnumerable<String> IncludeHeaders { get; set; }
+        public IEnumerable<String> LinkLibraries { get; set; }
+    }
+
     class Asterismfile {
-
-        public struct DEPENDENCY {
-            public string Project { get; set; }
-            public string Version { get; set; }
-        }
-
-        public struct ARTIFACTS
-        {
-            public IEnumerable<String> IncludeHeaders { get; set; }
-            public IEnumerable<String> LinkLibraries { get; set; }
-        }
 
         public Asterismfile(String filePath) {
             var reader = new StreamReader(filePath);
