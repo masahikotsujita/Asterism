@@ -11,11 +11,11 @@ internal struct Yaml {
 
     private YamlNode YamlNode { get; }
 
-    public Yaml this[string key] => GetNodeForKey(key);
+    public Yaml this[string key] => GetChild(key);
 
-    public Yaml this[int index] => GetNodeAtIndex(index);
+    public Yaml this[int index] => GetChild(index);
 
-    public Yaml GetNodeForKey(string key) {
+    public Yaml GetChild(string key) {
         if (YamlNode == null) {
             return new Yaml(null);
         }
@@ -30,7 +30,7 @@ internal struct Yaml {
         return new Yaml(childNode);
     }
 
-    public Yaml GetNodeAtIndex(int index) {
+    public Yaml GetChild(int index) {
         if (YamlNode == null) {
             return new Yaml(null);
         }
@@ -45,33 +45,29 @@ internal struct Yaml {
         return new Yaml(childNode);
     }
 
-    public string String {
-        get {
-            if (YamlNode == null) {
-                return null;
-            }
-            if (YamlNode.NodeType != YamlNodeType.Scalar) {
-                return null;
-            }
-            return ((YamlScalarNode) YamlNode).Value;
+    public string GetStringOrDefault() {
+        if (YamlNode == null) {
+            return null;
         }
+        if (YamlNode.NodeType != YamlNodeType.Scalar) {
+            return null;
+        }
+        return ((YamlScalarNode) YamlNode).Value;
     }
 
-    public IEnumerable<Yaml> List {
-        get {
-            if (YamlNode == null) {
-                return null;
-            }
-            if (YamlNode.NodeType != YamlNodeType.Sequence) {
-                return null;
-            }
-            var sequenceNode = (YamlSequenceNode) YamlNode;
-            var results = new List<Yaml>();
-            foreach (var node in sequenceNode) {
-                results.Add(new Yaml(node));
-            }
-            return results;
+    public List<Yaml> GetListOrDefault() {
+        if (YamlNode == null) {
+            return null;
         }
+        if (YamlNode.NodeType != YamlNodeType.Sequence) {
+            return null;
+        }
+        var sequenceNode = (YamlSequenceNode) YamlNode;
+        var results = new List<Yaml>();
+        foreach (var node in sequenceNode) {
+            results.Add(new Yaml(node));
+        }
+        return results;
     }
 }
 

@@ -22,19 +22,18 @@ internal class Asterismfile {
         yamlStream.Load(reader);
         var yaml = new Yaml(yamlStream.Documents[0].RootNode);
 
-        Name = yaml["name"].String;
+        Name = yaml["name"].GetStringOrDefault();
 
-        Dependencies = yaml["dependencies"]
-                       .List
+        Dependencies = yaml["dependencies"].GetListOrDefault()
                        ?.Select(yml => new DependencyInfo {
-                           Project = yml["project"].String,
-                           Version = yml["version"].String
+                           Project = yml["project"].GetStringOrDefault(),
+                           Version = yml["version"].GetStringOrDefault()
                        });
 
-        SolutionFilePath = yaml["sln_path"].String;
+        SolutionFilePath = yaml["sln_path"].GetStringOrDefault();
 
-        var includeHeaders = yaml["artifacts"]["include_headers"].List?.Select(yml => yml.String);
-        var linkLibraries = yaml["artifacts"]["link_libraries"].List?.Select(yml => yml.String);
+        var includeHeaders = yaml["artifacts"]["include_headers"].GetListOrDefault()?.Select(yml => yml.GetStringOrDefault());
+        var linkLibraries = yaml["artifacts"]["link_libraries"].GetListOrDefault()?.Select(yml => yml.GetStringOrDefault());
         if (includeHeaders != null || linkLibraries != null) {
             ArtifactsInfo = new ArtifactsInfo {
                 IncludeHeaders = includeHeaders,
