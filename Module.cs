@@ -34,13 +34,12 @@ internal class Module {
         propertySheet.AddConfigurations(configurations);
         propertySheet.AddUserMacro("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromSlnToArtifactsDir}");
         foreach (var configuration in configurations) {
-            propertySheet.AddAdditionalIncludeDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include", configuration);
+            propertySheet.AddAdditionalIncludeDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\", configuration);
         }
         if (forApplication) {
             foreach (var configuration in configurations) {
                 propertySheet.AddAdditionalDependencies(librariesForConfigurations[configuration], configuration);
                 propertySheet.AddAdditionalLibraryDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\", configuration);
-                propertySheet.AddAdditionalIncludeDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\", configuration);
             }
         }
 
