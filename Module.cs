@@ -31,19 +31,16 @@ internal class Module {
         var relativePathFromSlnToArtifactsDir = FileUtility.GetRelativePath(SolutionFilePath, Context.ArtifactsDirectoryPath);
         var propertySheetPath = Path.Combine(AsterismDirectoryPath, "vsprops\\Asterism.props");
         var propertySheet = new PropertySheet();
-        propertySheet.Configurations.AddRange(from configuration in configurations
-                                              select configuration);
-        propertySheet.UserMacros.Add(new KeyValuePair<string, string>("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromSlnToArtifactsDir}"));
+        propertySheet.AddConfigurations(configurations);
+        propertySheet.AddUserMacro("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromSlnToArtifactsDir}");
         foreach (var configuration in configurations) {
-            propertySheet.AdditionalIncludeDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include";
+            propertySheet.AddAdditionalIncludeDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include", configuration);
         }
-
         if (forApplication) {
             foreach (var configuration in configurations) {
-                var additionalDependencies = string.Join(";", librariesForConfigurations[configuration].ToArray());
-                propertySheet.AdditionalDependencies[configuration] = additionalDependencies;
-                propertySheet.AdditionalLibraryDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\";
-                propertySheet.AdditionalIncludeDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\";
+                propertySheet.AddAdditionalDependencies(librariesForConfigurations[configuration], configuration);
+                propertySheet.AddAdditionalLibraryDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\", configuration);
+                propertySheet.AddAdditionalIncludeDirectory($"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\", configuration);
             }
         }
 

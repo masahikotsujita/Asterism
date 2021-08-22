@@ -9,9 +9,9 @@ internal class PropertySheet {
     public PropertySheet() {
         UserMacros = new List<KeyValuePair<string, string>>();
         Configurations = new List<BuildConfiguration>();
-        AdditionalDependencies = new Dictionary<BuildConfiguration, string>();
-        AdditionalLibraryDirectories = new Dictionary<BuildConfiguration, string>();
-        AdditionalIncludeDirectories = new Dictionary<BuildConfiguration, string>();
+        AdditionalDependencies = new Dictionary<BuildConfiguration, List<string>>();
+        AdditionalLibraryDirectories = new Dictionary<BuildConfiguration, List<string>>();
+        AdditionalIncludeDirectories = new Dictionary<BuildConfiguration, List<string>>();
     }
 
     public void Save(string filePath) {
@@ -28,11 +28,11 @@ internal class PropertySheet {
                 from configuration in Configurations
                 select new XElement(ns + "ItemDefinitionGroup", new XAttribute("Condition", $"'$(Configuration)|$(Platform)'=='{configuration.ConfigurationName}|{configuration.PlatformName}'"),
                     new XElement(ns + "Link",
-                        new XElement(ns + "AdditionalDependencies", AdditionalDependencies.GetValueOrDefault(configuration) ?? ""),
-                        new XElement(ns + "AdditionalLibraryDirectories", AdditionalLibraryDirectories.GetValueOrDefault(configuration) ?? "")
+                        new XElement(ns + "AdditionalDependencies", AdditionalDependencies.GetValueOrDefault(configuration)?.Join(";") ?? ""),
+                        new XElement(ns + "AdditionalLibraryDirectories", AdditionalLibraryDirectories.GetValueOrDefault(configuration)?.Join(";") ?? "")
                     ),
                     new XElement(ns + "ClCompile",
-                        new XElement(ns + "AdditionalIncludeDirectories", AdditionalIncludeDirectories.GetValueOrDefault(configuration) ?? "")
+                        new XElement(ns + "AdditionalIncludeDirectories", AdditionalIncludeDirectories.GetValueOrDefault(configuration)?.Join(";") ?? "")
                     )
                 ),
                 new XElement(ns + "ItemGroup",
@@ -50,15 +50,52 @@ internal class PropertySheet {
         doc.Save(filePath);
     }
 
-    public List<KeyValuePair<string, string>> UserMacros { get; }
+    public void AddConfigurations(IEnumerable<BuildConfiguration> configurations) {
+        Configurations.AddRange(configurations);
+    }
 
-    public List<BuildConfiguration> Configurations { get; }
+    public void AddUserMacro(string key, string value) {
+        UserMacros.Add(new KeyValuePair<string, string>(key, value));
+    }
 
-    public Dictionary<BuildConfiguration, string> AdditionalDependencies { get; }
+    public void AddAdditionalDependencies(IEnumerable<string> libraryNames, BuildConfiguration configuration) {
+        if (!AdditionalDependencies.ContainsKey(configuration)) {
+            AdditionalDependencies[configuration] = new List<string>();
+        }
+        AdditionalDependencies[configuration].AddRange(libraryNames);
+    }
 
-    public Dictionary<BuildConfiguration, string> AdditionalLibraryDirectories { get; }
+    public void AddAdditionalLibraryDirectories(IEnumerable<string> libraryDirectoryPaths, BuildConfiguration configuration) {
+        if (!AdditionalLibraryDirectories.ContainsKey(configuration)) {
+            AdditionalLibraryDirectories[configuration] = new List<string>();
+        }
+        AdditionalLibraryDirectories[configuration].AddRange(libraryDirectoryPaths);
+    }
 
-    public Dictionary<BuildConfiguration, string> AdditionalIncludeDirectories { get; }
+    public void AddAdditionalLibraryDirectory(string libraryDirectoryPath, BuildConfiguration configuration) {
+        AddAdditionalLibraryDirectories(new[] { libraryDirectoryPath }, configuration);
+    }
+
+    public void AddAdditionalIncludeDirectories(IEnumerable<string> includePaths, BuildConfiguration configuration) {
+        if (!AdditionalIncludeDirectories.ContainsKey(configuration)) {
+            AdditionalIncludeDirectories[configuration] = new List<string>();
+        }
+        AdditionalIncludeDirectories[configuration].AddRange(includePaths);
+    }
+
+    public void AddAdditionalIncludeDirectory(string includePath, BuildConfiguration configuration) {
+        AddAdditionalIncludeDirectories(new[] { includePath }, configuration);
+    }
+
+    private List<BuildConfiguration> Configurations { get; }
+
+    private List<KeyValuePair<string, string>> UserMacros { get; }
+
+    private Dictionary<BuildConfiguration, List<string>> AdditionalDependencies { get; }
+
+    private Dictionary<BuildConfiguration, List<string>> AdditionalLibraryDirectories { get; }
+
+    private Dictionary<BuildConfiguration, List<string>> AdditionalIncludeDirectories { get; }
 }
 
 }
