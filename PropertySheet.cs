@@ -8,10 +8,10 @@ namespace Asterism {
 internal class PropertySheet {
     public PropertySheet() {
         UserMacros = new List<KeyValuePair<string, string>>();
-        Configurations = new List<string>();
-        AdditionalDependencies = new Dictionary<string, string>();
-        AdditionalLibraryDirectories = new Dictionary<string, string>();
-        AdditionalIncludeDirectories = new Dictionary<string, string>();
+        Configurations = new List<BuildConfiguration>();
+        AdditionalDependencies = new Dictionary<BuildConfiguration, string>();
+        AdditionalLibraryDirectories = new Dictionary<BuildConfiguration, string>();
+        AdditionalIncludeDirectories = new Dictionary<BuildConfiguration, string>();
     }
 
     public void Save(string filePath) {
@@ -26,7 +26,7 @@ internal class PropertySheet {
                 ),
                 new XElement(ns + "PropertyGroup"),
                 from configuration in Configurations
-                select new XElement(ns + "ItemDefinitionGroup", new XAttribute("Condition", $"'$(Configuration)|$(Platform)'=='{configuration}'"),
+                select new XElement(ns + "ItemDefinitionGroup", new XAttribute("Condition", $"'$(Configuration)|$(Platform)'=='{configuration.ConfigurationName}|{configuration.PlatformName}'"),
                     new XElement(ns + "Link",
                         new XElement(ns + "AdditionalDependencies", AdditionalDependencies.GetValueOrDefault(configuration) ?? ""),
                         new XElement(ns + "AdditionalLibraryDirectories", AdditionalLibraryDirectories.GetValueOrDefault(configuration) ?? "")
@@ -52,13 +52,13 @@ internal class PropertySheet {
 
     public List<KeyValuePair<string, string>> UserMacros { get; }
 
-    public List<string> Configurations { get; }
+    public List<BuildConfiguration> Configurations { get; }
 
-    public Dictionary<string, string> AdditionalDependencies { get; }
+    public Dictionary<BuildConfiguration, string> AdditionalDependencies { get; }
 
-    public Dictionary<string, string> AdditionalLibraryDirectories { get; }
+    public Dictionary<BuildConfiguration, string> AdditionalLibraryDirectories { get; }
 
-    public Dictionary<string, string> AdditionalIncludeDirectories { get; }
+    public Dictionary<BuildConfiguration, string> AdditionalIncludeDirectories { get; }
 }
 
 }

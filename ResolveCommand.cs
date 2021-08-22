@@ -26,19 +26,19 @@ internal class ResolveCommand {
         var modules = allModules.Where(x => x != rootModule);
 
         rootModule.LoadSolutionFile();
-        var configurations = from c in rootModule.SolutionFile.SolutionConfigurations
-                             where ShouldBuildPlatformConfiguration(c.PlatformName, c.ConfigurationName)
-                             select c;
-        var librariesForConfigurations = new Dictionary<string, List<string>>();
+        var configurations = rootModule.SolutionFile.SolutionConfigurations
+                                       .Select(x => new BuildConfiguration(x))
+                                       .Where(ShouldBuildPlatformConfiguration);
+        var librariesForConfigurations = new Dictionary<BuildConfiguration, List<string>>();
         foreach (var configuration in configurations) {
-            librariesForConfigurations[configuration.FullName] = new List<string>();
+            librariesForConfigurations[configuration] = new List<string>();
         }
 
         foreach (var module in modules) {
             module.LoadSolutionFile();
             module.CreatePropertySheet(false, null);
             foreach (var configuration in configurations) {
-                var libraries = librariesForConfigurations[configuration.FullName];
+                var libraries = librariesForConfigurations[configuration];
                 if (!module.Build(configuration, ref libraries)) {
                     return 1;
                 }
@@ -50,22 +50,22 @@ internal class ResolveCommand {
         return 0;
     }
 
-    private bool ShouldBuildPlatform(string platformName) {
-        if (!Options.Platforms.Any()) {
-            return true;
+    private bool ShouldBuildPlatformConfiguration(BuildConfiguration configuration) {
+        bool ShouldBuildPlatform(string platformName) {
+            if (!Options.Platforms.Any()) {
+                return true;
+            }
+            return Options.Platforms.Contains(platformName);
         }
-        return Options.Platforms.Contains(platformName);
-    }
 
-    private bool ShouldBuildConfiguration(string configurationName) {
-        if (!Options.Configurations.Any()) {
-            return true;
+        bool ShouldBuildConfiguration(string configurationName) {
+            if (!Options.Configurations.Any()) {
+                return true;
+            }
+            return Options.Configurations.Contains(configurationName);
         }
-        return Options.Configurations.Contains(configurationName);
-    }
 
-    private bool ShouldBuildPlatformConfiguration(string platformName, string configurationName) {
-        return ShouldBuildPlatform(platformName) && ShouldBuildConfiguration(configurationName);
+        return ShouldBuildPlatform(configuration.PlatformName) && ShouldBuildConfiguration(configuration.ConfigurationName);
     }
 
     public ResolveOptions Options { get; }

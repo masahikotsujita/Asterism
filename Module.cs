@@ -25,31 +25,32 @@ internal class Module {
         SolutionFile = SolutionFile.Parse(SolutionFilePath);
     }
 
-    public void CreatePropertySheet(bool forApplication, Dictionary<string, List<string>> librariesForConfigurations) {
-        var configurations = SolutionFile.SolutionConfigurations;
+    public void CreatePropertySheet(bool forApplication, Dictionary<BuildConfiguration, List<string>> librariesForConfigurations) {
+        var configurations = SolutionFile.SolutionConfigurations
+                                         .Select(x => new BuildConfiguration(x));
         var relativePathFromSlnToArtifactsDir = FileUtility.GetRelativePath(SolutionFilePath, Context.ArtifactsDirectoryPath);
         var propertySheetPath = Path.Combine(AsterismDirectoryPath, "vsprops\\Asterism.props");
         var propertySheet = new PropertySheet();
         propertySheet.Configurations.AddRange(from configuration in configurations
-                                              select configuration.FullName);
+                                              select configuration);
         propertySheet.UserMacros.Add(new KeyValuePair<string, string>("AsterismArtifactsDir", $"$(SolutionDir){relativePathFromSlnToArtifactsDir}"));
         foreach (var configuration in configurations) {
-            propertySheet.AdditionalIncludeDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include";
+            propertySheet.AdditionalIncludeDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include";
         }
 
         if (forApplication) {
             foreach (var configuration in configurations) {
-                var additionalDependencies = string.Join(";", librariesForConfigurations[configuration.FullName].ToArray());
-                propertySheet.AdditionalDependencies[configuration.FullName] = additionalDependencies;
-                propertySheet.AdditionalLibraryDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\";
-                propertySheet.AdditionalIncludeDirectories[configuration.FullName] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\";
+                var additionalDependencies = string.Join(";", librariesForConfigurations[configuration].ToArray());
+                propertySheet.AdditionalDependencies[configuration] = additionalDependencies;
+                propertySheet.AdditionalLibraryDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\lib\\";
+                propertySheet.AdditionalIncludeDirectories[configuration] = $"$(AsterismArtifactsDir){configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\";
             }
         }
 
         propertySheet.Save(propertySheetPath);
     }
 
-    public bool Build(SolutionConfigurationInSolution configuration, ref List<string> librariesToBeLinked) {
+    public bool Build(BuildConfiguration configuration, ref List<string> librariesToBeLinked) {
         var buildExitCode = MsBuildUtility.Build(SolutionFilePath, new Dictionary<string, string> { { "Platform", configuration.PlatformName }, { "Configuration", configuration.ConfigurationName } }, message => { Console.WriteLine(message); });
         if (buildExitCode != 0) {
             return false;

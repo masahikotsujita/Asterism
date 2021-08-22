@@ -78,6 +78,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Asterismfile.cs" />
+    <Compile Include="BuildConfiguration.cs" />
     <Compile Include="Context.cs" />
     <Compile Include="DictionaryExtension.cs" />
     <Compile Include="FileUtility.cs" />
