@@ -28,11 +28,11 @@ internal class PropertySheet {
                 from configuration in Configurations
                 select new XElement(ns + "ItemDefinitionGroup", new XAttribute("Condition", $"'$(Configuration)|$(Platform)'=='{configuration}'"),
                     new XElement(ns + "Link",
-                        new XElement(ns + "AdditionalDependencies", TryGetValueFromDictionary(AdditionalDependencies, configuration) ?? ""),
-                        new XElement(ns + "AdditionalLibraryDirectories", TryGetValueFromDictionary(AdditionalLibraryDirectories, configuration) ?? "")
+                        new XElement(ns + "AdditionalDependencies", AdditionalDependencies.GetValueOrDefault(configuration) ?? ""),
+                        new XElement(ns + "AdditionalLibraryDirectories", AdditionalLibraryDirectories.GetValueOrDefault(configuration) ?? "")
                     ),
                     new XElement(ns + "ClCompile",
-                        new XElement(ns + "AdditionalIncludeDirectories", TryGetValueFromDictionary(AdditionalIncludeDirectories, configuration) ?? "")
+                        new XElement(ns + "AdditionalIncludeDirectories", AdditionalIncludeDirectories.GetValueOrDefault(configuration) ?? "")
                     )
                 ),
                 new XElement(ns + "ItemGroup",
@@ -48,13 +48,6 @@ internal class PropertySheet {
             Directory.CreateDirectory(directory);
         }
         doc.Save(filePath);
-    }
-
-    private static string TryGetValueFromDictionary(Dictionary<string, string> dictionary, string key) {
-        if (dictionary.TryGetValue(key, out var value)) {
-            return value;
-        }
-        return null;
     }
 
     public List<KeyValuePair<string, string>> UserMacros { get; }

@@ -79,6 +79,7 @@
   <ItemGroup>
     <Compile Include="Asterismfile.cs" />
     <Compile Include="Context.cs" />
+    <Compile Include="DictionaryExtension.cs" />
     <Compile Include="FileUtility.cs" />
     <Compile Include="Module.cs" />
     <Compile Include="ModuleGraph.cs" />
