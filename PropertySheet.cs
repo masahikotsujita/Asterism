@@ -51,8 +51,7 @@ internal class PropertySheet {
     }
 
     private static string TryGetValueFromDictionary(Dictionary<string, string> dictionary, string key) {
-        string value;
-        if (dictionary.TryGetValue(key, out value)) {
+        if (dictionary.TryGetValue(key, out var value)) {
             return value;
         }
         return null;
