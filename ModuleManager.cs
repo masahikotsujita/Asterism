@@ -7,13 +7,13 @@ using Version = SemanticVersioning.Version;
 
 namespace Asterism {
 
-internal class ModuleGraph : Graph<string> {
+internal class ModuleManager : Graph<string> {
     private struct ModuleInfo {
         public Module Module { get; set; }
         public bool IsFetched { get; set; }
     }
 
-    public ModuleGraph(Context context, Module rootModule) {
+    public ModuleManager(Context context, Module rootModule) {
         Context = context;
         RootModule = rootModule;
         Caches = new Dictionary<string, ModuleInfo> {

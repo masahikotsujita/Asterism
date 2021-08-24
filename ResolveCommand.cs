@@ -18,7 +18,7 @@ internal class ResolveCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadAsterismfile();
 
-        var graph = new ModuleGraph(context, rootModule);
+        var graph = new ModuleManager(context, rootModule);
         var allModules = graph.ResolveVersions();
         if (allModules == null) {
             return 1;

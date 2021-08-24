@@ -84,7 +84,7 @@
     <Compile Include="FileUtility.cs" />
     <Compile Include="Graph.cs" />
     <Compile Include="Module.cs" />
-    <Compile Include="ModuleGraph.cs" />
+    <Compile Include="ModuleManager.cs" />
     <Compile Include="MsBuildUtility.cs" />
     <Compile Include="PropertySheet.cs" />
     <Compile Include="ResolveCommand.cs" />
