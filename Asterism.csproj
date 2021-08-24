@@ -82,6 +82,7 @@
     <Compile Include="Context.cs" />
     <Compile Include="DictionaryExtension.cs" />
     <Compile Include="FileUtility.cs" />
+    <Compile Include="Graph.cs" />
     <Compile Include="Module.cs" />
     <Compile Include="ModuleGraph.cs" />
     <Compile Include="MsBuildUtility.cs" />

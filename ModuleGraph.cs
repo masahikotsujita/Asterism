@@ -7,7 +7,7 @@ using Version = SemanticVersioning.Version;
 
 namespace Asterism {
 
-internal class ModuleGraph {
+internal class ModuleGraph : Graph<string> {
     private struct ModuleInfo {
         public Module Module { get; set; }
         public bool IsFetched { get; set; }
@@ -32,7 +32,8 @@ internal class ModuleGraph {
                 graph1[moduleName] = Caches[moduleName].Module;
             }
             var graph2 = GraphFromModuleForNames(graph1);
-            var modules = TopologicalSort(graph2).Select(moduleName => Caches[moduleName].Module);
+            IncomingEdgesForNodes = graph2;
+            var modules = this.TopologicalSort().Select(moduleName => Caches[moduleName].Module);
             var rangesForModuleNames = new Dictionary<string, List<Range>>();
             foreach (var module in modules) {
                 rangesForModuleNames[module.Name] = new List<Range>();
@@ -135,41 +136,6 @@ internal class ModuleGraph {
         return graph;
     }
 
-    private static IEnumerable<string> TopologicalSort(Dictionary<string, HashSet<string>> graph) {
-        // Perform topological sort using Kahn's Algorithm
-        // https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm
-        var l = new List<string>();
-        var s = graph.Where(nie => nie.Value.Count == 0)
-                     .Select(nie => nie.Key)
-                     .ToList();
-        // Clone the graph to work
-        var workGraph = new Dictionary<string, HashSet<string>>();
-        foreach (var nie in graph) {
-            var node = nie.Key;
-            var incomingEdges = nie.Value;
-            workGraph.Add(node, new HashSet<string>(incomingEdges));
-        }
-
-        while (s.Count > 0) {
-            var n = s[0];
-            s.RemoveAt(0);
-            l.Add(n);
-            foreach (var m in workGraph) {
-                if (m.Value.Contains(n)) {
-                    m.Value.Remove(n);
-                    if (m.Value.Count == 0) {
-                        s.Add(m.Key);
-                    }
-                }
-            }
-            workGraph.Remove(n);
-        }
-
-        l.Reverse();
-
-        return workGraph.Count > 0 ? null : l;
-    }
-
     private static string GetModuleNameFromProject(string project) {
         return project.Split('/')[1];
     }
@@ -179,6 +145,8 @@ internal class ModuleGraph {
     public Module RootModule { get; }
 
     private Dictionary<string, ModuleInfo> Caches { get; }
+
+    public Dictionary<string, HashSet<string>> IncomingEdgesForNodes { get; set; }
 }
 
 }
