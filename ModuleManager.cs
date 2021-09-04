@@ -7,10 +7,18 @@ using Version = SemanticVersioning.Version;
 
 namespace Asterism {
 
-internal class ModuleManager : Graph<string> {
+internal class ModuleManager {
     private struct ModuleInfo {
         public Module Module { get; set; }
         public bool IsFetched { get; set; }
+    }
+
+    private class ModuleGraph : Graph<string> {
+        public ModuleGraph() {
+            IncomingEdgesForNodes = new Dictionary<string, HashSet<string>>();
+        }
+
+        public Dictionary<string, HashSet<string>> IncomingEdgesForNodes { get; }
     }
 
     public ModuleManager(Context context, Module rootModule) {
@@ -32,8 +40,7 @@ internal class ModuleManager : Graph<string> {
                 graph1[moduleName] = Caches[moduleName].Module;
             }
             var graph2 = GraphFromModuleForNames(graph1);
-            IncomingEdgesForNodes = graph2;
-            var modules = this.TopologicalSort().Select(moduleName => Caches[moduleName].Module);
+            var modules = graph2.TopologicalSort().Select(moduleName => Caches[moduleName].Module);
             var rangesForModuleNames = new Dictionary<string, List<Range>>();
             foreach (var module in modules) {
                 rangesForModuleNames[module.Name] = new List<Range>();
@@ -120,16 +127,16 @@ internal class ModuleManager : Graph<string> {
         return result;
     }
 
-    private static Dictionary<string, HashSet<string>> GraphFromModuleForNames(Dictionary<string, Module> modulesForNames) {
-        var graph = new Dictionary<string, HashSet<string>>();
+    private static ModuleGraph GraphFromModuleForNames(Dictionary<string, Module> modulesForNames) {
+        var graph = new ModuleGraph();
         foreach (var moduleForName in modulesForNames) {
-            graph.Add(moduleForName.Key, new HashSet<string>());
+            graph.IncomingEdgesForNodes.Add(moduleForName.Key, new HashSet<string>());
         }
         foreach (var moduleForName in modulesForNames) {
             if (moduleForName.Value.Asterismfile.Dependencies != null) {
                 foreach (var dependency in moduleForName.Value.Asterismfile.Dependencies) {
                     var moduleName = GetModuleNameFromProject(dependency.Project);
-                    graph[moduleName].Add(moduleForName.Key);
+                    graph.IncomingEdgesForNodes[moduleName].Add(moduleForName.Key);
                 }
             }
         }
@@ -145,8 +152,6 @@ internal class ModuleManager : Graph<string> {
     public Module RootModule { get; }
 
     private Dictionary<string, ModuleInfo> Caches { get; }
-
-    public Dictionary<string, HashSet<string>> IncomingEdgesForNodes { get; set; }
 }
 
 }
