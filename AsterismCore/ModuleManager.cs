@@ -5,9 +5,9 @@ using LibGit2Sharp;
 using SemanticVersioning;
 using Version = SemanticVersioning.Version;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class ModuleManager {
+public class ModuleManager {
     private struct ModuleInfo {
         public Module Module { get; set; }
         public bool IsFetched { get; set; }

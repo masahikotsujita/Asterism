@@ -51,4 +51,7 @@
       <Version>11.2.1</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AsterismCore\AsterismCore.csproj" />
+  </ItemGroup>
 </Project>

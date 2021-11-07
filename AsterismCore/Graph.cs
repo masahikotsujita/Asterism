@@ -2,13 +2,13 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal interface Graph<TNode> where TNode : IEquatable<TNode> {
+public interface Graph<TNode> where TNode : IEquatable<TNode> {
     Dictionary<TNode, HashSet<TNode>> IncomingEdgesForNodes { get; }
 }
 
-internal static class GraphExtension {
+public static class GraphExtension {
     public static IEnumerable<Node> TopologicalSort<Node>(this Graph<Node> graph) where Node : IEquatable<Node> {
         // Perform topological sort using Kahn's Algorithm
         // https://en.wikipedia.org/wiki/Topological_sorting#Kahn's_algorithm

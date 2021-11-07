@@ -5,9 +5,9 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class MsBuildUtility {
+public class MsBuildUtility {
     private enum Version {
         VS2012,
         VS2013,

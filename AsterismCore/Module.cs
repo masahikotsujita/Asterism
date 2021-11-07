@@ -5,9 +5,9 @@ using System.Linq;
 using LibGit2Sharp;
 using Microsoft.Build.Construction;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class Module {
+public class Module {
     public Module(Context context, string name, string checkoutDirectoryPath) {
         Context = context;
         Name = name;

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class FileUtility {
+public class FileUtility {
     public static int XCopy(string source, string destination, string workingDirectory, Action<string> outputHandler) {
         var process = new Process {
             StartInfo = new ProcessStartInfo("xcopy") {

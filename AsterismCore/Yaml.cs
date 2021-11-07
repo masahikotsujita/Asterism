@@ -2,9 +2,9 @@
 using System.Linq;
 using YamlDotNet.RepresentationModel;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal struct Yaml {
+public struct Yaml {
     public Yaml(YamlNode yamlNode) {
         YamlNode = yamlNode;
     }
