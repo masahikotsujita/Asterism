@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Build.Construction;
 
-namespace Asterism {
+namespace AsterismCore {
 
 public sealed class BuildConfiguration : IEquatable<BuildConfiguration> {
     public BuildConfiguration(string platformName, string configurationName) {

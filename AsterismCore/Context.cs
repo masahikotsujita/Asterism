@@ -1,8 +1,8 @@
 ﻿using System.IO;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class Context {
+public class Context {
     public Context(string workingDirectoryPath) {
         WorkingDirectoryPath = workingDirectoryPath;
     }

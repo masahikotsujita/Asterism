@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.31424.327
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Asterism", "Asterism.csproj", "{D25006DE-76B4-4B89-B41C-19DB68A4A197}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asterism", "Asterism\Asterism.csproj", "{D25006DE-76B4-4B89-B41C-19DB68A4A197}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38} = {8CD2848F-81C6-4CB8-9B73-9278AF549A38}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsterismCore", "AsterismCore\AsterismCore.csproj", "{8CD2848F-81C6-4CB8-9B73-9278AF549A38}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +20,10 @@ Global
 		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{D25006DE-76B4-4B89-B41C-19DB68A4A197}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

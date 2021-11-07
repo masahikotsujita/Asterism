@@ -3,9 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace Asterism {
+namespace AsterismCore {
 
-internal class PropertySheet {
+public class PropertySheet {
     public PropertySheet() {
         UserMacros = new List<KeyValuePair<string, string>>();
         Configurations = new List<BuildConfiguration>();

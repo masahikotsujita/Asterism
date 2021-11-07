@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using YamlDotNet.RepresentationModel;
 
-namespace Asterism {
+namespace AsterismCore {
 
 public struct DependencyInfo {
     public string Project { get; set; }
@@ -15,7 +15,7 @@ public struct ArtifactsInfo {
     public IEnumerable<string> LinkLibraries { get; set; }
 }
 
-internal class Asterismfile {
+public class Asterismfile {
     public Asterismfile(string filePath) {
         var reader = new StreamReader(filePath);
         var yamlStream = new YamlStream();
