@@ -8,7 +8,12 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Asterism", "Asterism\Asteri
 		{8CD2848F-81C6-4CB8-9B73-9278AF549A38} = {8CD2848F-81C6-4CB8-9B73-9278AF549A38}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AsterismCore", "AsterismCore\AsterismCore.csproj", "{8CD2848F-81C6-4CB8-9B73-9278AF549A38}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsterismCore", "AsterismCore\AsterismCore.csproj", "{8CD2848F-81C6-4CB8-9B73-9278AF549A38}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AsterismCore.Specs", "AsterismCore.Specs\AsterismCore.Specs.csproj", "{525EBBB3-9E81-456A-A452-15105073F2EA}"
+	ProjectSection(ProjectDependencies) = postProject
+		{8CD2848F-81C6-4CB8-9B73-9278AF549A38} = {8CD2848F-81C6-4CB8-9B73-9278AF549A38}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -24,6 +29,10 @@ Global
 		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8CD2848F-81C6-4CB8-9B73-9278AF549A38}.Release|Any CPU.Build.0 = Release|Any CPU
+		{525EBBB3-9E81-456A-A452-15105073F2EA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{525EBBB3-9E81-456A-A452-15105073F2EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{525EBBB3-9E81-456A-A452-15105073F2EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{525EBBB3-9E81-456A-A452-15105073F2EA}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
