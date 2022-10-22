@@ -4,8 +4,8 @@ using CommandLine;
 namespace Asterism {
 
 internal class Program {
-    private static void Main(string[] args) {
-        Parser.Default.ParseArguments<ResolveOptions, object>(args)
+    private static int Main(string[] args) {
+        return Parser.Default.ParseArguments<ResolveOptions, object>(args)
               .MapResult(
                   (ResolveOptions options) => {
                       var command = new ResolveCommand(options);
