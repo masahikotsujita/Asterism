@@ -442,3 +442,7 @@ FodyWeavers.xsd
 
 # SpecFlow
 *.feature.cs
+
+
+# Visual Studio user-specific files
+launchSettings.json
