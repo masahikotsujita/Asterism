@@ -121,8 +121,10 @@ public class ModuleManager {
             }
         }
 
-        foreach (var dependency in RootModule.Asterismfile.Dependencies) {
-            GetDependency(dependency);
+        if (RootModule.Asterismfile.Dependencies != null) {
+            foreach (var dependency in RootModule.Asterismfile.Dependencies) {
+                GetDependency(dependency);
+            }
         }
         return result;
     }
