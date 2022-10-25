@@ -13,7 +13,8 @@ public class MsBuildUtility {
         VS2013,
         VS2015,
         VS2017,
-        VS2019
+        VS2019,
+        VS2022
     }
 
     public static int Build(string slnFilePath, Dictionary<string, string> properties, Action<string> outputHandler) {
@@ -60,6 +61,11 @@ public class MsBuildUtility {
                 File.Exists(MSBUILD_PATH_2019_ENTERPRISE) ? MSBUILD_PATH_2019_ENTERPRISE :
                 File.Exists(MSBUILD_PATH_2019_PROFESSIONAL) ? MSBUILD_PATH_2019_PROFESSIONAL :
                 File.Exists(MSBUILD_PATH_2019_COMMUNITY) ? MSBUILD_PATH_2019_COMMUNITY : null;
+        case Version.VS2022:
+            return
+                File.Exists(MSBUILD_PATH_2022_ENTERPRISE) ? MSBUILD_PATH_2022_ENTERPRISE :
+                File.Exists(MSBUILD_PATH_2022_PROFESSIONAL) ? MSBUILD_PATH_2022_PROFESSIONAL :
+                File.Exists(MSBUILD_PATH_2022_COMMUNITY) ? MSBUILD_PATH_2022_COMMUNITY : null;
         }
         return null;
     }
@@ -83,6 +89,8 @@ public class MsBuildUtility {
                     return Version.VS2017;
                 case 16:
                     return Version.VS2019;
+                case 17:
+                    return Version.VS2022;
                 default:
                     return null;
                 }
@@ -99,6 +107,9 @@ public class MsBuildUtility {
     private static readonly string MSBUILD_PATH_2019_COMMUNITY = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\MSBuild\Current\Bin\MSBuild.exe";
     private static readonly string MSBUILD_PATH_2019_PROFESSIONAL = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Professional\MSBuild\Current\Bin\MSBuild.exe";
     private static readonly string MSBUILD_PATH_2019_ENTERPRISE = @"C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\MSBuild.exe";
+    private static readonly string MSBUILD_PATH_2022_COMMUNITY = @"C:\Program Files\Microsoft Visual Studio\2022\Community\Msbuild\Current\Bin\MSBuild.exe";
+    private static readonly string MSBUILD_PATH_2022_PROFESSIONAL = @"C:\Program Files\Microsoft Visual Studio\2022\Professional\Msbuild\Current\Bin\MSBuild.exe";
+    private static readonly string MSBUILD_PATH_2022_ENTERPRISE = @"C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Msbuild\Current\Bin\MSBuild.exe";
 }
 
 }
