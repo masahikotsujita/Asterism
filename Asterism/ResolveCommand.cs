@@ -17,7 +17,7 @@ internal class ResolveCommand {
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
-        rootModule.LoadAsterismfile();
+        rootModule.LoadSpecFile();
 
         var graph = new ModuleManager(context, rootModule);
         var allModules = graph.ResolveVersions();

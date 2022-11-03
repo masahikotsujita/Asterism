@@ -17,14 +17,14 @@ public class Module {
         Repository = new Repository(CheckoutDirectoryPath);
     }
 
-    public void LoadAsterismfile() {
+    public void LoadSpecFile() {
         var reader = File.OpenText(AsterismfilePath);
         var deserializer = new DeserializerBuilder()
                            .WithNamingConvention(UnderscoredNamingConvention.Instance)
                            .Build();
-        Asterismfile = deserializer.Deserialize<Asterismfile>(reader);
+        SpecDocument = deserializer.Deserialize<SpecDocument>(reader);
         SolutionFilePath = Path.Combine(CheckoutDirectoryPath,
-            FileUtility.ReplacePathSeparatorsForWindows(Asterismfile.SlnPath));
+            FileUtility.ReplacePathSeparatorsForWindows(SpecDocument.SlnPath));
     }
 
     public void LoadSolutionFile() {
@@ -58,7 +58,7 @@ public class Module {
             return false;
         }
 
-        if (Asterismfile.Artifacts is ArtifactsInfo artifacts) {
+        if (SpecDocument.Artifacts is ArtifactsInSpec artifacts) {
             var headerDestination = Path.Combine(Context.ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
             foreach (var headerPattern in artifacts.IncludeHeaders) {
                 var headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
@@ -96,7 +96,7 @@ public class Module {
 
     public string AsterismfilePath => Path.Combine(CheckoutDirectoryPath, ".asterismfile.yml");
 
-    public Asterismfile Asterismfile { get; private set; }
+    public SpecDocument SpecDocument { get; private set; }
 
     public string SolutionFilePath { get; private set; }
 
