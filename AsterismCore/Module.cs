@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using LibGit2Sharp;
 using Microsoft.Build.Construction;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
 
@@ -16,9 +18,13 @@ public class Module {
     }
 
     public void LoadAsterismfile() {
-        Asterismfile = new Asterismfile(AsterismfilePath);
+        var reader = File.OpenText(AsterismfilePath);
+        var deserializer = new DeserializerBuilder()
+                           .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                           .Build();
+        Asterismfile = deserializer.Deserialize<Asterismfile>(reader);
         SolutionFilePath = Path.Combine(CheckoutDirectoryPath,
-            FileUtility.ReplacePathSeparatorsForWindows(Asterismfile.SolutionFilePath));
+            FileUtility.ReplacePathSeparatorsForWindows(Asterismfile.SlnPath));
     }
 
     public void LoadSolutionFile() {
@@ -52,7 +58,7 @@ public class Module {
             return false;
         }
 
-        if (Asterismfile.ArtifactsInfo is ArtifactsInfo artifacts) {
+        if (Asterismfile.Artifacts is ArtifactsInfo artifacts) {
             var headerDestination = Path.Combine(Context.ArtifactsDirectoryPath, $"{configuration.PlatformName}\\{configuration.ConfigurationName}\\include\\");
             foreach (var headerPattern in artifacts.IncludeHeaders) {
                 var headerSource = FileUtility.ReplacePathSeparatorsForWindows(headerPattern);
