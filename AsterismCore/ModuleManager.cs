@@ -46,8 +46,8 @@ public class ModuleManager {
                 rangesForModuleNames[module.Name] = new List<Range>();
             }
             foreach (var module in modules) {
-                if (module.Asterismfile.Dependencies != null) {
-                    foreach (var dependency in module.Asterismfile.Dependencies) {
+                if (module.SpecDocument.Dependencies != null) {
+                    foreach (var dependency in module.SpecDocument.Dependencies) {
                         var moduleName = GetModuleNameFromProject(dependency.Project);
                         var range = new Range(dependency.Version);
                         rangesForModuleNames[moduleName].Add(range);
@@ -92,7 +92,7 @@ public class ModuleManager {
     private IEnumerable<string> GetDependenciesRecursively() {
         var result = new List<string> { RootModule.Name };
 
-        void GetDependency(DependencyInfo dependency) {
+        void GetDependency(DependencyInSpec dependency) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
             if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
@@ -113,16 +113,16 @@ public class ModuleManager {
                 var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
                 Commands.Fetch(repository, remote.Name, refSpecs, null, "");
             }
-            moduleInfo.Module.LoadAsterismfile();
-            if (moduleInfo.Module.Asterismfile.Dependencies != null) {
-                foreach (var innerDependency in moduleInfo.Module.Asterismfile.Dependencies) {
+            moduleInfo.Module.LoadSpecFile();
+            if (moduleInfo.Module.SpecDocument.Dependencies != null) {
+                foreach (var innerDependency in moduleInfo.Module.SpecDocument.Dependencies) {
                     GetDependency(innerDependency);
                 }
             }
         }
 
-        if (RootModule.Asterismfile.Dependencies != null) {
-            foreach (var dependency in RootModule.Asterismfile.Dependencies) {
+        if (RootModule.SpecDocument.Dependencies != null) {
+            foreach (var dependency in RootModule.SpecDocument.Dependencies) {
                 GetDependency(dependency);
             }
         }
@@ -135,8 +135,8 @@ public class ModuleManager {
             graph.IncomingEdgesForNodes.Add(moduleForName.Key, new HashSet<string>());
         }
         foreach (var moduleForName in modulesForNames) {
-            if (moduleForName.Value.Asterismfile.Dependencies != null) {
-                foreach (var dependency in moduleForName.Value.Asterismfile.Dependencies) {
+            if (moduleForName.Value.SpecDocument.Dependencies != null) {
+                foreach (var dependency in moduleForName.Value.SpecDocument.Dependencies) {
                     var moduleName = GetModuleNameFromProject(dependency.Project);
                     graph.IncomingEdgesForNodes[moduleName].Add(moduleForName.Key);
                 }
