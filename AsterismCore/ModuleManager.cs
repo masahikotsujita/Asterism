@@ -35,6 +35,24 @@ public class ModuleManager {
         };
     }
 
+    public void LoadLockFile()
+    {
+        if (!File.Exists(Context.LockFilePath))
+        {
+            return;
+        }
+        var reader = File.OpenText(Context.LockFilePath);
+        var deserializer = new DeserializerBuilder()
+                           .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                           .Build();
+        LockDocument = deserializer.Deserialize<LockDocument>(reader);
+        LockedRevisionsByModuleName = new Dictionary<string, string>();
+        foreach (var dependency in LockDocument.Dependencies)
+        {
+            LockedRevisionsByModuleName[GetModuleNameFromProject(dependency.Project)] = dependency.Revision;
+        }
+    }
+
     public void SaveLockFile() {
         var lockDocument = new LockDocument {
             Dependencies = (from dependency in Dependencies
@@ -109,6 +127,21 @@ public class ModuleManager {
         }
     }
 
+    public IEnumerable<Module> ResolveVersionsUsingLockFile() {
+        var moduleNames = GetDependenciesUsingLockFile();
+        var modules = moduleNames.Select(moduleName => Caches[moduleName].Module);
+        foreach (var module in modules) {
+            if (module != RootModule) {
+                var lockedRevisionSha1 = LockedRevisionsByModuleName[module.Name];
+                if (module.Repository.Head.Tip.Sha != lockedRevisionSha1) {
+                    Commands.Checkout(module.Repository, lockedRevisionSha1);
+                    break;
+                }
+            }
+        }
+        return modules;
+    }
+
     private IEnumerable<string> GetDependenciesRecursively() {
         var result = new List<string> { RootModule.Name };
 
@@ -150,6 +183,40 @@ public class ModuleManager {
         return result;
     }
 
+    private IEnumerable<string> GetDependenciesUsingLockFile() {
+        var result = new List<string> { RootModule.Name };
+
+        void GetDependency(DependencyInLock dependency) {
+            var moduleName = GetModuleNameFromProject(dependency.Project);
+            result.Add(moduleName);
+            if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
+                var moduleCheckoutPath = Path.Combine(Context.CheckoutDirectoryPath, moduleName);
+                if (!Directory.Exists(moduleCheckoutPath)) {
+                    var githubPath = $"https://github.com/{dependency.Project}.git";
+                    Repository.Clone(githubPath, moduleCheckoutPath);
+                }
+                moduleInfo = new ModuleInfo {
+                    Module = new Module(Context, moduleName, moduleCheckoutPath),
+                    IsFetched = false,
+                    ProjectPath = dependency.Project
+                };
+                Caches[moduleName] = moduleInfo;
+            }
+            if (!moduleInfo.IsFetched) {
+                var repository = moduleInfo.Module.Repository;
+                var remote = repository.Network.Remotes["origin"];
+                var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+                Commands.Fetch(repository, remote.Name, refSpecs, null, "");
+            }
+            moduleInfo.Module.LoadSpecFile();
+        }
+
+        foreach (var dependency in LockDocument.Dependencies) {
+            GetDependency(dependency);
+        }
+        return result;
+    }
+
     private static ModuleGraph GraphFromModuleForNames(Dictionary<string, Module> modulesForNames) {
         var graph = new ModuleGraph();
         foreach (var moduleForName in modulesForNames) {
@@ -177,6 +244,9 @@ public class ModuleManager {
     public List<Module> Dependencies { get; set; }
 
     private Dictionary<string, ModuleInfo> Caches { get; }
+
+    private LockDocument LockDocument { get; set; }
+    private Dictionary<string, string> LockedRevisionsByModuleName { get; set; }
 }
 
 }
