@@ -5,14 +5,14 @@ namespace Asterism {
 
 internal class Program {
     private static int Main(string[] args) {
-        return Parser.Default.ParseArguments<InitOptions, ResolveOptions, object>(args)
+        return Parser.Default.ParseArguments<InitOptions, UpdateOptions, object>(args)
               .MapResult(
                   (InitOptions options) => {
                       var command = new InitCommand(options);
                       return command.Run();
                   },
-                  (ResolveOptions options) => {
-                      var command = new ResolveCommand(options);
+                  (UpdateOptions options) => {
+                      var command = new UpdateCommand(options);
                       return command.Run();
                   },
                   errors => {
