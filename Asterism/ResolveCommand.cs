@@ -48,6 +48,9 @@ internal class ResolveCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
+        graph.Dependencies = modules.ToList();
+        graph.SaveLockFile();
+
         return 0;
     }
 

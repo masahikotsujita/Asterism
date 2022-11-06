@@ -3,7 +3,9 @@ using System.IO;
 using System.Linq;
 using LibGit2Sharp;
 using SemanticVersioning;
+using YamlDotNet.Serialization;
 using Version = SemanticVersioning.Version;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
 
@@ -11,6 +13,7 @@ public class ModuleManager {
     private struct ModuleInfo {
         public Module Module { get; set; }
         public bool IsFetched { get; set; }
+        public string ProjectPath { get; set; }
     }
 
     private class ModuleGraph : Graph<string> {
@@ -30,6 +33,23 @@ public class ModuleManager {
                 IsFetched = true
             }
         };
+    }
+
+    public void SaveLockFile() {
+        var lockDocument = new LockDocument {
+            Dependencies = (from dependency in Dependencies
+                            select new DependencyInLock()
+                            {
+                                Project = Caches[dependency.Name].ProjectPath,
+                                Revision = dependency.Repository.Head.Tip.Sha
+                            }).ToList()
+        };
+        var serializer = new SerializerBuilder()
+                         .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                         .Build();
+        var writer = new StreamWriter(Context.LockFilePath, false);
+        serializer.Serialize(writer, lockDocument);
+        writer.Flush();
     }
 
     public IEnumerable<Module> ResolveVersions() {
@@ -103,7 +123,8 @@ public class ModuleManager {
                 }
                 moduleInfo = new ModuleInfo {
                     Module = new Module(Context, moduleName, moduleCheckoutPath),
-                    IsFetched = false
+                    IsFetched = false,
+                    ProjectPath = dependency.Project
                 };
                 Caches[moduleName] = moduleInfo;
             }
@@ -152,6 +173,8 @@ public class ModuleManager {
     public Context Context { get; }
 
     public Module RootModule { get; }
+
+    public List<Module> Dependencies { get; set; }
 
     private Dictionary<string, ModuleInfo> Caches { get; }
 }
