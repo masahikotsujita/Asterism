@@ -19,11 +19,11 @@ internal class InitCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadSpecFile();
 
-        var graph = new ModuleManager(context, rootModule);
+        var resolver = new Resolver(context, rootModule);
 
-        graph.LoadLockFile();
+        resolver.LoadLockFile();
 
-        var allModules = graph.ResolveVersionsUsingLockFile();
+        var allModules = resolver.ResolveVersionsUsingLockFile();
         if (allModules == null) {
             return 1;
         }
@@ -51,8 +51,8 @@ internal class InitCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        graph.Dependencies = modules.ToList();
-        graph.SaveLockFile();
+        resolver.Dependencies = modules.ToList();
+        resolver.SaveLockFile();
 
         return 0;
     }

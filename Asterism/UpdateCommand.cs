@@ -19,8 +19,8 @@ internal class UpdateCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadSpecFile();
 
-        var graph = new ModuleManager(context, rootModule);
-        var allModules = graph.ResolveVersions();
+        var resolver = new Resolver(context, rootModule);
+        var allModules = resolver.ResolveVersions();
         if (allModules == null) {
             return 1;
         }
@@ -48,8 +48,8 @@ internal class UpdateCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        graph.Dependencies = modules.ToList();
-        graph.SaveLockFile();
+        resolver.Dependencies = modules.ToList();
+        resolver.SaveLockFile();
 
         return 0;
     }
