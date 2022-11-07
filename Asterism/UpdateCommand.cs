@@ -19,6 +19,9 @@ internal class UpdateCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadSpecFile();
 
+        rootModule.IsFetched = true;
+        context.Caches[rootModule.Name] = rootModule;
+
         var resolver = new Resolver(rootModule);
         var allModules = resolver.ResolveVersions();
         if (allModules == null) {

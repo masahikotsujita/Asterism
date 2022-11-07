@@ -20,10 +20,6 @@ public class Resolver {
 
     public Resolver(Module rootModule) {
         RootModule = rootModule;
-        rootModule.IsFetched = true;
-        Caches = new Dictionary<string, Module> {
-            [RootModule.Name] = rootModule
-        };
     }
 
     public void LoadLockFile()
@@ -49,7 +45,7 @@ public class Resolver {
             Dependencies = (from dependency in Dependencies
                             select new DependencyInLock()
                             {
-                                Project = Caches[dependency.Name].ProjectPath,
+                                Project = RootModule.Context.Caches[dependency.Name].ProjectPath,
                                 Revision = dependency.Repository.Head.Tip.Sha
                             }).ToList()
         };
@@ -66,10 +62,10 @@ public class Resolver {
             var moduleNames = GetDependenciesRecursively();
             var graph1 = new Dictionary<string, Module>();
             foreach (var moduleName in moduleNames) {
-                graph1[moduleName] = Caches[moduleName];
+                graph1[moduleName] = RootModule.Context.Caches[moduleName];
             }
             var graph2 = GraphFromModuleForNames(graph1);
-            var modules = graph2.TopologicalSort().Select(moduleName => Caches[moduleName]);
+            var modules = graph2.TopologicalSort().Select(moduleName => RootModule.Context.Caches[moduleName]);
             var rangesForModuleNames = new Dictionary<string, List<Range>>();
             foreach (var module in modules) {
                 rangesForModuleNames[module.Name] = new List<Range>();
@@ -120,7 +116,7 @@ public class Resolver {
 
     public IEnumerable<Module> ResolveVersionsUsingLockFile() {
         var moduleNames = GetDependenciesUsingLockFile();
-        var modules = moduleNames.Select(moduleName => Caches[moduleName]);
+        var modules = moduleNames.Select(moduleName => RootModule.Context.Caches[moduleName]);
         foreach (var module in modules) {
             if (module != RootModule) {
                 var lockedRevisionSha1 = LockedRevisionsByModuleName[module.Name];
@@ -139,7 +135,7 @@ public class Resolver {
         void GetDependency(DependencyInSpec dependency) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
-            if (!Caches.TryGetValue(moduleName, out var module)) {
+            if (!RootModule.Context.Caches.TryGetValue(moduleName, out var module)) {
                 var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
@@ -148,7 +144,7 @@ public class Resolver {
                 module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
                 module.IsFetched = false;
                 module.ProjectPath = dependency.Project;
-                Caches[moduleName] = module;
+                RootModule.Context.Caches[moduleName] = module;
             }
             if (!module.IsFetched) {
                 var repository = module.Repository;
@@ -178,7 +174,7 @@ public class Resolver {
         void GetDependency(DependencyInLock dependency) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
-            if (!Caches.TryGetValue(moduleName, out var module)) {
+            if (!RootModule.Context.Caches.TryGetValue(moduleName, out var module)) {
                 var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
@@ -187,7 +183,7 @@ public class Resolver {
                 module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
                 module.IsFetched = false;
                 module.ProjectPath = dependency.Project;
-                Caches[moduleName] = module;
+                RootModule.Context.Caches[moduleName] = module;
             }
             if (!module.IsFetched) {
                 var repository = module.Repository;
@@ -227,8 +223,6 @@ public class Resolver {
     public Module RootModule { get; }
 
     public List<Module> Dependencies { get; set; }
-
-    private Dictionary<string, Module> Caches { get; }
 
     private LockDocument LockDocument { get; set; }
     private Dictionary<string, string> LockedRevisionsByModuleName { get; set; }
