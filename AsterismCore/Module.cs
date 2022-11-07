@@ -101,6 +101,10 @@ public class Module {
     public string SolutionFilePath { get; private set; }
 
     public SolutionFile SolutionFile { get; private set; }
+
+    public bool IsFetched { get; set; }
+
+    public string ProjectPath { get; set; }
 }
 
 }

@@ -10,12 +10,6 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace AsterismCore {
 
 public class Resolver {
-    private struct ModuleInfo {
-        public Module Module { get; set; }
-        public bool IsFetched { get; set; }
-        public string ProjectPath { get; set; }
-    }
-
     private class ModuleGraph : Graph<string> {
         public ModuleGraph() {
             IncomingEdgesForNodes = new Dictionary<string, HashSet<string>>();
@@ -26,11 +20,9 @@ public class Resolver {
 
     public Resolver(Module rootModule) {
         RootModule = rootModule;
-        Caches = new Dictionary<string, ModuleInfo> {
-            [RootModule.Name] = new ModuleInfo {
-                Module = rootModule,
-                IsFetched = true
-            }
+        rootModule.IsFetched = true;
+        Caches = new Dictionary<string, Module> {
+            [RootModule.Name] = rootModule
         };
     }
 
@@ -74,10 +66,10 @@ public class Resolver {
             var moduleNames = GetDependenciesRecursively();
             var graph1 = new Dictionary<string, Module>();
             foreach (var moduleName in moduleNames) {
-                graph1[moduleName] = Caches[moduleName].Module;
+                graph1[moduleName] = Caches[moduleName];
             }
             var graph2 = GraphFromModuleForNames(graph1);
-            var modules = graph2.TopologicalSort().Select(moduleName => Caches[moduleName].Module);
+            var modules = graph2.TopologicalSort().Select(moduleName => Caches[moduleName]);
             var rangesForModuleNames = new Dictionary<string, List<Range>>();
             foreach (var module in modules) {
                 rangesForModuleNames[module.Name] = new List<Range>();
@@ -128,7 +120,7 @@ public class Resolver {
 
     public IEnumerable<Module> ResolveVersionsUsingLockFile() {
         var moduleNames = GetDependenciesUsingLockFile();
-        var modules = moduleNames.Select(moduleName => Caches[moduleName].Module);
+        var modules = moduleNames.Select(moduleName => Caches[moduleName]);
         foreach (var module in modules) {
             if (module != RootModule) {
                 var lockedRevisionSha1 = LockedRevisionsByModuleName[module.Name];
@@ -147,28 +139,26 @@ public class Resolver {
         void GetDependency(DependencyInSpec dependency) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
-            if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
+            if (!Caches.TryGetValue(moduleName, out var module)) {
                 var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
-                moduleInfo = new ModuleInfo {
-                    Module = new Module(RootModule.Context, moduleName, moduleCheckoutPath),
-                    IsFetched = false,
-                    ProjectPath = dependency.Project
-                };
-                Caches[moduleName] = moduleInfo;
+                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
+                module.IsFetched = false;
+                module.ProjectPath = dependency.Project;
+                Caches[moduleName] = module;
             }
-            if (!moduleInfo.IsFetched) {
-                var repository = moduleInfo.Module.Repository;
+            if (!module.IsFetched) {
+                var repository = module.Repository;
                 var remote = repository.Network.Remotes["origin"];
                 var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
                 Commands.Fetch(repository, remote.Name, refSpecs, null, "");
             }
-            moduleInfo.Module.LoadSpecFile();
-            if (moduleInfo.Module.SpecDocument.Dependencies != null) {
-                foreach (var innerDependency in moduleInfo.Module.SpecDocument.Dependencies) {
+            module.LoadSpecFile();
+            if (module.SpecDocument.Dependencies != null) {
+                foreach (var innerDependency in module.SpecDocument.Dependencies) {
                     GetDependency(innerDependency);
                 }
             }
@@ -188,26 +178,24 @@ public class Resolver {
         void GetDependency(DependencyInLock dependency) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
-            if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
+            if (!Caches.TryGetValue(moduleName, out var module)) {
                 var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
-                moduleInfo = new ModuleInfo {
-                    Module = new Module(RootModule.Context, moduleName, moduleCheckoutPath),
-                    IsFetched = false,
-                    ProjectPath = dependency.Project
-                };
-                Caches[moduleName] = moduleInfo;
+                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
+                module.IsFetched = false;
+                module.ProjectPath = dependency.Project;
+                Caches[moduleName] = module;
             }
-            if (!moduleInfo.IsFetched) {
-                var repository = moduleInfo.Module.Repository;
+            if (!module.IsFetched) {
+                var repository = module.Repository;
                 var remote = repository.Network.Remotes["origin"];
                 var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
                 Commands.Fetch(repository, remote.Name, refSpecs, null, "");
             }
-            moduleInfo.Module.LoadSpecFile();
+            module.LoadSpecFile();
         }
 
         foreach (var dependency in LockDocument.Dependencies) {
@@ -240,7 +228,7 @@ public class Resolver {
 
     public List<Module> Dependencies { get; set; }
 
-    private Dictionary<string, ModuleInfo> Caches { get; }
+    private Dictionary<string, Module> Caches { get; }
 
     private LockDocument LockDocument { get; set; }
     private Dictionary<string, string> LockedRevisionsByModuleName { get; set; }
