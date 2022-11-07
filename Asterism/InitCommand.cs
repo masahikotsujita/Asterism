@@ -19,7 +19,7 @@ internal class InitCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadSpecFile();
 
-        var resolver = new Resolver(context, rootModule);
+        var resolver = new Resolver(rootModule);
 
         resolver.LoadLockFile();
 

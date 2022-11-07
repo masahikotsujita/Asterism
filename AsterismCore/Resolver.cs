@@ -24,8 +24,7 @@ public class Resolver {
         public Dictionary<string, HashSet<string>> IncomingEdgesForNodes { get; }
     }
 
-    public Resolver(Context context, Module rootModule) {
-        Context = context;
+    public Resolver(Module rootModule) {
         RootModule = rootModule;
         Caches = new Dictionary<string, ModuleInfo> {
             [RootModule.Name] = new ModuleInfo {
@@ -37,11 +36,11 @@ public class Resolver {
 
     public void LoadLockFile()
     {
-        if (!File.Exists(Context.LockFilePath))
+        if (!File.Exists(RootModule.Context.LockFilePath))
         {
             return;
         }
-        var reader = File.OpenText(Context.LockFilePath);
+        var reader = File.OpenText(RootModule.Context.LockFilePath);
         var deserializer = new DeserializerBuilder()
                            .WithNamingConvention(UnderscoredNamingConvention.Instance)
                            .Build();
@@ -65,7 +64,7 @@ public class Resolver {
         var serializer = new SerializerBuilder()
                          .WithNamingConvention(UnderscoredNamingConvention.Instance)
                          .Build();
-        var writer = new StreamWriter(Context.LockFilePath, false);
+        var writer = new StreamWriter(RootModule.Context.LockFilePath, false);
         serializer.Serialize(writer, lockDocument);
         writer.Flush();
     }
@@ -149,13 +148,13 @@ public class Resolver {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
             if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
-                var moduleCheckoutPath = Path.Combine(Context.CheckoutDirectoryPath, moduleName);
+                var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
                 moduleInfo = new ModuleInfo {
-                    Module = new Module(Context, moduleName, moduleCheckoutPath),
+                    Module = new Module(RootModule.Context, moduleName, moduleCheckoutPath),
                     IsFetched = false,
                     ProjectPath = dependency.Project
                 };
@@ -190,13 +189,13 @@ public class Resolver {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             result.Add(moduleName);
             if (!Caches.TryGetValue(moduleName, out var moduleInfo)) {
-                var moduleCheckoutPath = Path.Combine(Context.CheckoutDirectoryPath, moduleName);
+                var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
                 if (!Directory.Exists(moduleCheckoutPath)) {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
                 moduleInfo = new ModuleInfo {
-                    Module = new Module(Context, moduleName, moduleCheckoutPath),
+                    Module = new Module(RootModule.Context, moduleName, moduleCheckoutPath),
                     IsFetched = false,
                     ProjectPath = dependency.Project
                 };
@@ -236,9 +235,7 @@ public class Resolver {
     private static string GetModuleNameFromProject(string project) {
         return project.Split('/')[1];
     }
-
-    public Context Context { get; }
-
+    
     public Module RootModule { get; }
 
     public List<Module> Dependencies { get; set; }

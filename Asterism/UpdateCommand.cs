@@ -19,7 +19,7 @@ internal class UpdateCommand {
         var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
         rootModule.LoadSpecFile();
 
-        var resolver = new Resolver(context, rootModule);
+        var resolver = new Resolver(rootModule);
         var allModules = resolver.ResolveVersions();
         if (allModules == null) {
             return 1;
