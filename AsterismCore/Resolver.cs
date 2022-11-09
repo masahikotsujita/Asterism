@@ -40,23 +40,6 @@ public class Resolver {
         }
     }
 
-    public void SaveLockFile() {
-        var lockDocument = new LockDocument {
-            Dependencies = (from dependency in Dependencies
-                            select new DependencyInLock()
-                            {
-                                Project = RootModule.Context.Caches[dependency.Name].ProjectPath,
-                                Revision = dependency.Repository.Head.Tip.Sha
-                            }).ToList()
-        };
-        var serializer = new SerializerBuilder()
-                         .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                         .Build();
-        var writer = new StreamWriter(RootModule.Context.LockFilePath, false);
-        serializer.Serialize(writer, lockDocument);
-        writer.Flush();
-    }
-
     public IEnumerable<Module> ResolveVersions() {
         while (true) {
             var moduleNames = GetDependenciesRecursively();
@@ -221,8 +204,6 @@ public class Resolver {
     }
     
     public Module RootModule { get; }
-
-    public List<Module> Dependencies { get; set; }
 
     private LockDocument LockDocument { get; set; }
     private Dictionary<string, string> LockedRevisionsByModuleName { get; set; }

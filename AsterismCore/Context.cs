@@ -1,5 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
 
@@ -20,6 +23,24 @@ public class Context {
     public string CheckoutDirectoryPath => Path.Combine(AsterismDirectoryPath, @"checkout\");
 
     public Dictionary<string, Module> Caches { get; }
+
+    public List<Module> Dependencies { get; set; }
+
+    public void SaveLockFile() {
+        var lockDocument = new LockDocument {
+            Dependencies = (from dependency in Dependencies
+                            select new DependencyInLock() {
+                                Project = Caches[dependency.Name].ProjectPath,
+                                Revision = dependency.Repository.Head.Tip.Sha
+                            }).ToList()
+        };
+        var serializer = new SerializerBuilder()
+                         .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                         .Build();
+        var writer = new StreamWriter(LockFilePath, false);
+        serializer.Serialize(writer, lockDocument);
+        writer.Flush();
+    }
 }
 
 }

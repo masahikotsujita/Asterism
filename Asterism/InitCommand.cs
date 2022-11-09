@@ -54,8 +54,8 @@ internal class InitCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        resolver.Dependencies = modules.ToList();
-        resolver.SaveLockFile();
+        context.Dependencies = modules.ToList();
+        context.SaveLockFile();
 
         return 0;
     }
