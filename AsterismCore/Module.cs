@@ -10,11 +10,12 @@ using YamlDotNet.Serialization.NamingConventions;
 namespace AsterismCore {
 
 public class Module {
-    public Module(Context context, string name, string checkoutDirectoryPath) {
+    public Module(Context context, string name, string checkoutDirectoryPath, bool isRoot) {
         Context = context;
         Name = name;
         CheckoutDirectoryPath = checkoutDirectoryPath;
         Repository = new Repository(CheckoutDirectoryPath);
+        IsRoot = isRoot;
     }
 
     public void LoadSpecFile() {
@@ -105,6 +106,8 @@ public class Module {
     public bool IsFetched { get; set; }
 
     public string ProjectPath { get; set; }
+
+    public bool IsRoot { get; }
 }
 
 }

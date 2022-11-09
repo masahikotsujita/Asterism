@@ -16,7 +16,7 @@ internal class UpdateCommand {
         var context = new Context(workingDirectoryPath);
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
-        var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
+        var rootModule = new Module(context, rootModuleName, workingDirectoryPath, true);
         rootModule.LoadSpecFile();
 
         rootModule.IsFetched = true;

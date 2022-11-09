@@ -124,7 +124,7 @@ public class Resolver {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
-                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
+                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath, false);
                 module.IsFetched = false;
                 module.ProjectPath = dependency.Project;
                 RootModule.Context.Caches[moduleName] = module;
@@ -163,7 +163,7 @@ public class Resolver {
                     var githubPath = $"https://github.com/{dependency.Project}.git";
                     Repository.Clone(githubPath, moduleCheckoutPath);
                 }
-                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath);
+                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath, false);
                 module.IsFetched = false;
                 module.ProjectPath = dependency.Project;
                 RootModule.Context.Caches[moduleName] = module;
