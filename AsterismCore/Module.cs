@@ -1,13 +1,43 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using LibGit2Sharp;
 using Microsoft.Build.Construction;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
+using Version = SemanticVersioning.Version;
+using Range = SemanticVersioning.Range;
 
 namespace AsterismCore {
+
+public enum VersionSpecifierType {
+    Version,
+    Sha1
+}
+
+public struct VersionSpecifier {
+    public VersionSpecifierType Type { get; set; }
+    public Version Version { get; set; }
+    public string Sha1 { get; set; }
+}
+
+public enum VersionConstraintType {
+    Range,
+    Sha1
+}
+
+public struct VersionConstraint {
+    public VersionConstraintType Type { get; set; }
+    public Range Range { get; set; }
+    public string Sha1 { get; set; }
+}
+
+public struct Requirement {
+    public string ModuleName { get; set; }
+    public VersionConstraint VersionConstraint { get; set; }
+}
 
 public class Module {
     public Module(Context context, string name, string checkoutDirectoryPath, bool isRoot) {
@@ -108,6 +138,149 @@ public class Module {
     public string ProjectPath { get; set; }
 
     public bool IsRoot { get; }
+
+    public bool IsLockMode { get; set; }
+
+    public void EnsureCheckout(VersionSpecifier versionSpecifier) {
+        switch (versionSpecifier.Type) {
+        case VersionSpecifierType.Version:
+            var tag = Repository.Tags
+                                .Select(tag => Version.TryParse(tag.FriendlyName, out _) ? tag : null)
+                                .First(tag => tag != null);
+            if (Repository.Head.Tip.Sha != tag.Target.Sha) {
+                Commands.Checkout(Repository, tag.CanonicalName);
+            }
+            break;
+        case VersionSpecifierType.Sha1:
+            if (Repository.Head.Tip.Sha != versionSpecifier.Sha1) {
+                Commands.Checkout(Repository, versionSpecifier.Sha1);
+            }
+            break;
+        }
+    }
+
+    private IEnumerable<Requirement> GetSpecRequirements() {
+        LoadSpecFile();
+        var requirements = new List<Requirement>();
+        foreach (var dependency in SpecDocument.Dependencies) {
+            var moduleName = GetModuleNameFromProject(dependency.Project);
+            var range = Range.Parse(dependency.Version);
+            var requirement = new Requirement {
+                ModuleName = moduleName,
+                VersionConstraint = new VersionConstraint {
+                    Type = VersionConstraintType.Range,
+                    Range = range
+                }
+            };
+            requirements.Add(requirement);
+        }
+        return requirements;
+    }
+
+    private void EnsureLoadLockFile() {
+        if (LockDocument != null) {
+            return;
+        }
+        if (!File.Exists(Context.LockFilePath)) {
+            return;
+        }
+        var reader = File.OpenText(Context.LockFilePath);
+        var deserializer = new DeserializerBuilder()
+                           .WithNamingConvention(UnderscoredNamingConvention.Instance)
+                           .Build();
+        LockDocument = deserializer.Deserialize<LockDocument>(reader);
+    }
+
+    private LockDocument LockDocument { get; set; }
+
+    private IEnumerable<Requirement> GetLockRequirements() {
+        if (LockDocument == null) {
+            EnsureLoadLockFile();
+        }
+        var requirements = new List<Requirement>();
+        foreach (var dependency in LockDocument.Dependencies) {
+            var moduleName = GetModuleNameFromProject(dependency.Project);
+            var sha1 = dependency.Revision;
+            var requirement = new Requirement {
+                ModuleName = moduleName,
+                VersionConstraint = new VersionConstraint {
+                    Type = VersionConstraintType.Sha1,
+                    Sha1 = sha1
+                }
+            };
+            requirements.Add(requirement);
+        }
+        return requirements;
+    }
+
+    public IEnumerable<Requirement> GetRequirements(VersionSpecifier? versionSpecifier) {
+        if (!IsRoot) {
+            Debug.Assert(versionSpecifier != null);
+            EnsureCheckout(versionSpecifier.Value);
+            if (IsLockMode) {
+                return new List<Requirement>();
+            }
+            return GetSpecRequirements();
+        }
+        Debug.Assert(versionSpecifier == null);
+        if (IsLockMode) {
+            return GetLockRequirements();
+        }
+        return GetSpecRequirements();
+    }
+
+    public VersionSpecifier? GetMaxSatisfyingVersionForConstraints(IEnumerable<VersionConstraint> constraints) {
+        var constraint = constraints.Aggregate((c1, c2) => c1.Type == VersionConstraintType.Range && c2.Type == VersionConstraintType.Range ? new VersionConstraint {
+                    Type = VersionConstraintType.Range,
+                    Range = c1.Range.Intersect(c2.Range)
+                } : throw new ArgumentException());                           
+        switch (constraint.Type) {
+        case VersionConstraintType.Range:
+            var maxSatisfyingVersionString = constraint.Range
+                .MaxSatisfying(Repository.Tags.Select(tag => tag.FriendlyName), true, true);
+            if (maxSatisfyingVersionString == null) {
+                return null;
+            }
+            return new VersionSpecifier {
+                Type = VersionSpecifierType.Version,
+                Version = new Version(maxSatisfyingVersionString)
+            };
+        case VersionConstraintType.Sha1:
+            return new VersionSpecifier {
+                Type = VersionSpecifierType.Sha1,
+                Sha1 = constraint.Sha1
+            };
+        default:
+            throw new InvalidOperationException();
+        }
+    }
+
+    public bool IsSatisfiedVersion(VersionConstraint constraint, VersionSpecifier versionSpecifier) {
+        switch (constraint.Type) {
+        case VersionConstraintType.Range:
+            switch (versionSpecifier.Type) {
+            case VersionSpecifierType.Version:
+                return constraint.Range.IsSatisfied(versionSpecifier.Version, true);
+            case VersionSpecifierType.Sha1:
+                throw new InvalidOperationException();
+            //var version = Repository.Tags
+            //                    .Where(tag => tag.PeeledTarget.Sha == versionSpecifier.Sha1)
+            //                    .Select(tag => Version.TryParse(tag.FriendlyName, out var version) ? version : null)
+            //                    .FirstOrDefault(version => version != null && constraint.Range.IsSatisfied(version));
+            //return version != null;
+            default:
+                throw new InvalidOperationException();
+            }
+        case VersionConstraintType.Sha1:
+            return constraint.Sha1 == versionSpecifier.Sha1;
+        default:
+            throw new InvalidOperationException();
+        }
+    }
+
+    private static string GetModuleNameFromProject(string project) {
+        return project.Split('/')[1];
+    }
 }
 
 }
