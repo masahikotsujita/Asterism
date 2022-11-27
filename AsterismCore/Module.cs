@@ -7,20 +7,54 @@ using LibGit2Sharp;
 using Microsoft.Build.Construction;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
-using Version = SemanticVersioning.Version;
 using Range = SemanticVersioning.Range;
+using Version = SemanticVersioning.Version;
 
 namespace AsterismCore {
 
 public enum VersionSpecifierType {
+    Default,
     Version,
     Sha1
 }
 
-public struct VersionSpecifier {
+public struct VersionSpecifier : IEquatable<VersionSpecifier> {
+    public override bool Equals(object obj) {
+        return obj is VersionSpecifier other && Equals(other);
+    }
+
+    public override int GetHashCode() {
+        return HashCode.Combine((int)Type, Version, Sha1);
+    }
+
+    public static VersionSpecifier Default => new() { Type = VersionSpecifierType.Default };
     public VersionSpecifierType Type { get; set; }
     public Version Version { get; set; }
     public string Sha1 { get; set; }
+
+    public bool Equals(VersionSpecifier other) {
+        if (Type != other.Type) {
+            return false;
+        }
+        switch (Type) {
+        case VersionSpecifierType.Default:
+            return true;
+        case VersionSpecifierType.Version:
+            return Version == other.Version;
+        case VersionSpecifierType.Sha1:
+            return Sha1 == other.Sha1;
+        default:
+            throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    public static bool operator ==(VersionSpecifier a, VersionSpecifier b) {
+        return a.Equals(b);
+    }
+
+    public static bool operator !=(VersionSpecifier a, VersionSpecifier b) {
+        return !a.Equals(b);
+    }
 }
 
 public enum VersionConstraintType {
@@ -32,23 +66,61 @@ public struct VersionConstraint {
     public VersionConstraintType Type { get; set; }
     public Range Range { get; set; }
     public string Sha1 { get; set; }
+
+    public VersionConstraint Intersect(VersionConstraint other) {
+        if (Type != other.Type) {
+            throw new ArgumentException("Cannot intersect version constraints with different version constraint type.");
+        }
+        switch (Type) {
+        case VersionConstraintType.Range:
+            return new VersionConstraint {
+                Type = VersionConstraintType.Range,
+                Range = Range.Intersect(other.Range)
+            };
+        case VersionConstraintType.Sha1:
+            throw new ArgumentException("Cannot intersect sha version constraints");
+        default:
+            throw new ArgumentOutOfRangeException();
+        }
+    }
 }
 
 public struct Requirement {
-    public string ModuleName { get; set; }
+    public Module Module { get; set; }
     public VersionConstraint VersionConstraint { get; set; }
 }
 
 public class Module {
-    public Module(Context context, string name, string checkoutDirectoryPath, bool isRoot) {
+
+    public Module(Context context, string name, bool isLockMode) {
         Context = context;
+        IsRoot = true;
+        IsLockMode = isLockMode;
         Name = name;
-        CheckoutDirectoryPath = checkoutDirectoryPath;
-        Repository = new Repository(CheckoutDirectoryPath);
-        IsRoot = isRoot;
+        CheckoutDirectoryPath = context.WorkingDirectoryPath;
     }
 
-    public void LoadSpecFile() {
+    public Module(Context context, bool isRoot, bool isLockMode, string projectPath) {
+        Context = context;
+        IsRoot = isRoot;
+        IsLockMode = isLockMode;
+        ProjectPath = projectPath;
+        var moduleName = GetModuleNameFromProject(projectPath);
+        Name = moduleName;
+        CheckoutDirectoryPath = Path.Combine(context.CheckoutDirectoryPath, moduleName);
+        if (!Directory.Exists(CheckoutDirectoryPath)) {
+            var githubPath = $"https://github.com/{projectPath}.git";
+            Repository.Clone(githubPath, CheckoutDirectoryPath);
+            Repository = new Repository(CheckoutDirectoryPath);
+        } else {
+            Repository = new Repository(CheckoutDirectoryPath);
+            var remote = Repository.Network.Remotes["origin"];
+            var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
+            Commands.Fetch(Repository, remote.Name, refSpecs, null, "");
+        }
+    }
+
+    private void LoadSpecFile() {
         var reader = File.OpenText(AsterismfilePath);
         var deserializer = new DeserializerBuilder()
                            .WithNamingConvention(UnderscoredNamingConvention.Instance)
@@ -115,32 +187,6 @@ public class Module {
         return true;
     }
 
-    public Context Context { get; }
-
-    public string Name { get; }
-
-    public string CheckoutDirectoryPath { get; }
-
-    public Repository Repository { get; }
-
-    public string AsterismDirectoryPath => Path.Combine(CheckoutDirectoryPath, ".asterism\\");
-
-    public string AsterismfilePath => Path.Combine(CheckoutDirectoryPath, ".asterismfile.yml");
-
-    public SpecDocument SpecDocument { get; private set; }
-
-    public string SolutionFilePath { get; private set; }
-
-    public SolutionFile SolutionFile { get; private set; }
-
-    public bool IsFetched { get; set; }
-
-    public string ProjectPath { get; set; }
-
-    public bool IsRoot { get; }
-
-    public bool IsLockMode { get; set; }
-
     public void EnsureCheckout(VersionSpecifier versionSpecifier) {
         switch (versionSpecifier.Type) {
         case VersionSpecifierType.Version:
@@ -156,23 +202,32 @@ public class Module {
                 Commands.Checkout(Repository, versionSpecifier.Sha1);
             }
             break;
+        case VersionSpecifierType.Default:
+        default:
+            throw new ArgumentOutOfRangeException();
         }
     }
 
     private IEnumerable<Requirement> GetSpecRequirements() {
         LoadSpecFile();
         var requirements = new List<Requirement>();
-        foreach (var dependency in SpecDocument.Dependencies) {
-            var moduleName = GetModuleNameFromProject(dependency.Project);
-            var range = Range.Parse(dependency.Version);
-            var requirement = new Requirement {
-                ModuleName = moduleName,
-                VersionConstraint = new VersionConstraint {
-                    Type = VersionConstraintType.Range,
-                    Range = range
+        if (SpecDocument.Dependencies != null) {
+            foreach (var dependency in SpecDocument.Dependencies) {
+                var moduleName = GetModuleNameFromProject(dependency.Project);
+                var range = Range.Parse(dependency.Version);
+                if (!Context.Caches.TryGetValue(moduleName, out var module)) {
+                    module = new Module(Context, false, IsLockMode, dependency.Project);
+                    Context.Caches[moduleName] = module;
                 }
-            };
-            requirements.Add(requirement);
+                var requirement = new Requirement {
+                    Module = module,
+                    VersionConstraint = new VersionConstraint {
+                        Type = VersionConstraintType.Range,
+                        Range = range
+                    }
+                };
+                requirements.Add(requirement);
+            }
         }
         return requirements;
     }
@@ -191,8 +246,6 @@ public class Module {
         LockDocument = deserializer.Deserialize<LockDocument>(reader);
     }
 
-    private LockDocument LockDocument { get; set; }
-
     private IEnumerable<Requirement> GetLockRequirements() {
         if (LockDocument == null) {
             EnsureLoadLockFile();
@@ -201,8 +254,12 @@ public class Module {
         foreach (var dependency in LockDocument.Dependencies) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             var sha1 = dependency.Revision;
+            if (!Context.Caches.TryGetValue(moduleName, out var module)) {
+                module = new Module(Context, false, IsLockMode, dependency.Project);
+                Context.Caches[moduleName] = module;
+            }
             var requirement = new Requirement {
-                ModuleName = moduleName,
+                Module = module,
                 VersionConstraint = new VersionConstraint {
                     Type = VersionConstraintType.Sha1,
                     Sha1 = sha1
@@ -213,31 +270,26 @@ public class Module {
         return requirements;
     }
 
-    public IEnumerable<Requirement> GetRequirements(VersionSpecifier? versionSpecifier) {
-        if (!IsRoot) {
-            Debug.Assert(versionSpecifier != null);
-            EnsureCheckout(versionSpecifier.Value);
-            if (IsLockMode) {
-                return new List<Requirement>();
+    public IEnumerable<Requirement> GetRequirements(VersionSpecifier versionSpecifier) {
+        if (IsRoot) {
+            Debug.Assert(versionSpecifier.Type == VersionSpecifierType.Default);
+            if (!IsLockMode) {
+                return GetSpecRequirements();
             }
-            return GetSpecRequirements();
-        }
-        Debug.Assert(versionSpecifier == null);
-        if (IsLockMode) {
             return GetLockRequirements();
         }
-        return GetSpecRequirements();
+        EnsureCheckout(versionSpecifier);
+        if (!IsLockMode) {
+            return GetSpecRequirements();
+        }
+        return new List<Requirement>();
     }
 
-    public VersionSpecifier? GetMaxSatisfyingVersionForConstraints(IEnumerable<VersionConstraint> constraints) {
-        var constraint = constraints.Aggregate((c1, c2) => c1.Type == VersionConstraintType.Range && c2.Type == VersionConstraintType.Range ? new VersionConstraint {
-                    Type = VersionConstraintType.Range,
-                    Range = c1.Range.Intersect(c2.Range)
-                } : throw new ArgumentException());                           
+    public VersionSpecifier? GetMaxSatisfyingVersionForConstraint(VersionConstraint constraint) {
         switch (constraint.Type) {
         case VersionConstraintType.Range:
             var maxSatisfyingVersionString = constraint.Range
-                .MaxSatisfying(Repository.Tags.Select(tag => tag.FriendlyName), true, true);
+                                                       .MaxSatisfying(Repository.Tags.Select(tag => tag.FriendlyName), true, true);
             if (maxSatisfyingVersionString == null) {
                 return null;
             }
@@ -278,9 +330,50 @@ public class Module {
         }
     }
 
+    public string GetSha1(VersionSpecifier versionSpecifier) {
+        switch (versionSpecifier.Type) {
+        case VersionSpecifierType.Version:
+            var tagAndVersion = Repository.Tags
+                                          .Select<Tag, (Tag tag, Version version)>(tag => (tag, Version.TryParse(tag.FriendlyName, out var version) ? version : null))
+                                          .Where(tuple => tuple.version != null)
+                                          .First(tuple => tuple.version == versionSpecifier.Version);
+            return tagAndVersion.tag.PeeledTarget.Sha;
+        case VersionSpecifierType.Sha1:
+            return versionSpecifier.Sha1;
+        default:
+            throw new ArgumentOutOfRangeException();
+        }
+    }
+
     private static string GetModuleNameFromProject(string project) {
         return project.Split('/')[1];
     }
+
+    private Context Context { get; }
+
+    public string Name { get; }
+
+    private string CheckoutDirectoryPath { get; }
+
+    private Repository Repository { get; }
+
+    public string AsterismDirectoryPath => Path.Combine(CheckoutDirectoryPath, ".asterism\\");
+
+    public string AsterismfilePath => Path.Combine(CheckoutDirectoryPath, ".asterismfile.yml");
+
+    public SpecDocument SpecDocument { get; private set; }
+
+    public string SolutionFilePath { get; private set; }
+
+    public SolutionFile SolutionFile { get; private set; }
+
+    public string ProjectPath { get; }
+
+    private bool IsRoot { get; }
+
+    private bool IsLockMode { get; }
+
+    private LockDocument LockDocument { get; set; }
 }
 
 }

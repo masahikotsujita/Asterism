@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LibGit2Sharp;
@@ -22,165 +23,52 @@ public class Resolver {
         RootModule = rootModule;
     }
 
-    public void LoadLockFile()
-    {
-        if (!File.Exists(RootModule.Context.LockFilePath))
-        {
-            return;
-        }
-        var reader = File.OpenText(RootModule.Context.LockFilePath);
-        var deserializer = new DeserializerBuilder()
-                           .WithNamingConvention(UnderscoredNamingConvention.Instance)
-                           .Build();
-        LockDocument = deserializer.Deserialize<LockDocument>(reader);
-        LockedRevisionsByModuleName = new Dictionary<string, string>();
-        foreach (var dependency in LockDocument.Dependencies)
-        {
-            LockedRevisionsByModuleName[GetModuleNameFromProject(dependency.Project)] = dependency.Revision;
-        }
-    }
-
-    public IEnumerable<Module> ResolveVersions() {
-        while (true) {
-            var moduleNames = GetDependenciesRecursively();
-            var graph1 = new Dictionary<string, Module>();
-            foreach (var moduleName in moduleNames) {
-                graph1[moduleName] = RootModule.Context.Caches[moduleName];
-            }
-            var graph2 = GraphFromModuleForNames(graph1);
-            var modules = graph2.TopologicalSort().Select(moduleName => RootModule.Context.Caches[moduleName]);
-            var rangesForModuleNames = new Dictionary<string, List<Range>>();
-            foreach (var module in modules) {
-                rangesForModuleNames[module.Name] = new List<Range>();
-            }
-            foreach (var module in modules) {
-                if (module.SpecDocument.Dependencies != null) {
-                    foreach (var dependency in module.SpecDocument.Dependencies) {
-                        var moduleName = GetModuleNameFromProject(dependency.Project);
-                        var range = new Range(dependency.Version);
-                        rangesForModuleNames[moduleName].Add(range);
+    public IEnumerable<(Module module, VersionSpecifier versionSpecifier)> ResolveVersions() {
+        var moduleByModuleName = new Dictionary<string, Module> {
+            [RootModule.Name] = RootModule
+        };
+        var resolvedVersionSpecifierByModuleName = new Dictionary<string, VersionSpecifier>();
+        var graph = new ModuleGraph();
+        do {
+            graph.IncomingEdgesForNodes.Clear();
+            graph.IncomingEdgesForNodes[RootModule.Name] = new HashSet<string>();
+            var versionConstraintsByModuleName = new Dictionary<string, VersionConstraint>();
+            void GetDependencies(Module parentModule, VersionSpecifier parentModuleVersionSpecifier) {
+                foreach (var requirement in parentModule.GetRequirements(parentModuleVersionSpecifier)) {
+                    // cache module...
+                    moduleByModuleName[requirement.Module.Name] = requirement.Module;
+                    // construct module graph...
+                    if (!graph.IncomingEdgesForNodes.ContainsKey(requirement.Module.Name)) {
+                        graph.IncomingEdgesForNodes[requirement.Module.Name] = new HashSet<string>();
                     }
-                }
-            }
-            var allOk = true;
-            foreach (var module in modules) {
-                if (module != RootModule) {
-                    var selectedTag = module.Repository.Tags
-                                            .Select<Tag, (Tag Tag, Version Version)>(tag => (tag, Version.TryParse(tag.FriendlyName, out var version) ? version : null))
-                                            .Where(tuple => tuple.Version != null)
-                                            .Where(tuple => {
-                                                var success = true;
-                                                foreach (var range in rangesForModuleNames[module.Name]) {
-                                                    if (!range.IsSatisfied(tuple.Version)) {
-                                                        success = false;
-                                                    }
-                                                }
-                                                return success;
-                                            })
-                                            .OrderBy(tuple => tuple.Version)
-                                            .Select(tuple => tuple.Tag)
-                                            .LastOrDefault();
-                    if (selectedTag != null) {
-                        if (module.Repository.Head.Tip.Sha != selectedTag.Target.Sha) {
-                            Commands.Checkout(module.Repository, selectedTag.CanonicalName);
-                            allOk = false;
-                            break;
-                        }
+                    graph.IncomingEdgesForNodes[requirement.Module.Name].Add(parentModule.Name);
+                    // get dependencies for dependencies recursively...
+                    if (versionConstraintsByModuleName.TryGetValue(requirement.Module.Name, out var existingVersionConstraint)) {
+                        versionConstraintsByModuleName[requirement.Module.Name] = existingVersionConstraint.Intersect(requirement.VersionConstraint);
                     } else {
-                        return null;
+                        versionConstraintsByModuleName[requirement.Module.Name] = requirement.VersionConstraint;
+                    }
+                    var versionConstraint = versionConstraintsByModuleName[requirement.Module.Name];
+                    if (requirement.Module.GetMaxSatisfyingVersionForConstraint(versionConstraint) is not { } requirementVersionSpecifier) {
+                        throw new Exception($"Requirement (module: {requirement.Module.Name} version: {requirement.VersionConstraint}) in module {parentModule.Name} cannot be satisfied.");
+                    }
+                    if (resolvedVersionSpecifierByModuleName.TryGetValue(requirement.Module.Name, out var resolvedVersionSpecifier) && resolvedVersionSpecifier != requirementVersionSpecifier) {
+                        resolvedVersionSpecifierByModuleName[requirement.Module.Name] = requirementVersionSpecifier;
+                        // pinned version was updated by narrower range, so try again from the beginning
+                        continue;
+                    } else {
+                        resolvedVersionSpecifierByModuleName[requirement.Module.Name] = requirementVersionSpecifier;
+                        GetDependencies(requirement.Module, requirementVersionSpecifier);
                     }
                 }
             }
-            if (allOk) {
-                return modules;
-            }
-        }
-    }
-
-    public IEnumerable<Module> ResolveVersionsUsingLockFile() {
-        var moduleNames = GetDependenciesUsingLockFile();
-        var modules = moduleNames.Select(moduleName => RootModule.Context.Caches[moduleName]);
-        foreach (var module in modules) {
-            if (module != RootModule) {
-                var lockedRevisionSha1 = LockedRevisionsByModuleName[module.Name];
-                if (module.Repository.Head.Tip.Sha != lockedRevisionSha1) {
-                    Commands.Checkout(module.Repository, lockedRevisionSha1);
-                    break;
-                }
-            }
-        }
-        return modules;
-    }
-
-    private IEnumerable<string> GetDependenciesRecursively() {
-        var result = new List<string> { RootModule.Name };
-
-        void GetDependency(DependencyInSpec dependency) {
-            var moduleName = GetModuleNameFromProject(dependency.Project);
-            result.Add(moduleName);
-            if (!RootModule.Context.Caches.TryGetValue(moduleName, out var module)) {
-                var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
-                if (!Directory.Exists(moduleCheckoutPath)) {
-                    var githubPath = $"https://github.com/{dependency.Project}.git";
-                    Repository.Clone(githubPath, moduleCheckoutPath);
-                }
-                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath, false);
-                module.IsFetched = false;
-                module.ProjectPath = dependency.Project;
-                RootModule.Context.Caches[moduleName] = module;
-            }
-            if (!module.IsFetched) {
-                var repository = module.Repository;
-                var remote = repository.Network.Remotes["origin"];
-                var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
-                Commands.Fetch(repository, remote.Name, refSpecs, null, "");
-            }
-            module.LoadSpecFile();
-            if (module.SpecDocument.Dependencies != null) {
-                foreach (var innerDependency in module.SpecDocument.Dependencies) {
-                    GetDependency(innerDependency);
-                }
-            }
-        }
-
-        if (RootModule.SpecDocument.Dependencies != null) {
-            foreach (var dependency in RootModule.SpecDocument.Dependencies) {
-                GetDependency(dependency);
-            }
-        }
-        return result;
-    }
-
-    private IEnumerable<string> GetDependenciesUsingLockFile() {
-        var result = new List<string> { RootModule.Name };
-
-        void GetDependency(DependencyInLock dependency) {
-            var moduleName = GetModuleNameFromProject(dependency.Project);
-            result.Add(moduleName);
-            if (!RootModule.Context.Caches.TryGetValue(moduleName, out var module)) {
-                var moduleCheckoutPath = Path.Combine(RootModule.Context.CheckoutDirectoryPath, moduleName);
-                if (!Directory.Exists(moduleCheckoutPath)) {
-                    var githubPath = $"https://github.com/{dependency.Project}.git";
-                    Repository.Clone(githubPath, moduleCheckoutPath);
-                }
-                module = new Module(RootModule.Context, moduleName, moduleCheckoutPath, false);
-                module.IsFetched = false;
-                module.ProjectPath = dependency.Project;
-                RootModule.Context.Caches[moduleName] = module;
-            }
-            if (!module.IsFetched) {
-                var repository = module.Repository;
-                var remote = repository.Network.Remotes["origin"];
-                var refSpecs = remote.FetchRefSpecs.Select(x => x.Specification);
-                Commands.Fetch(repository, remote.Name, refSpecs, null, "");
-            }
-            module.LoadSpecFile();
-        }
-
-        foreach (var dependency in LockDocument.Dependencies) {
-            GetDependency(dependency);
-        }
-        return result;
+            GetDependencies(RootModule, VersionSpecifier.Default);
+            break;
+        } while (true);
+        var topologicallySortedModuleNames = graph.TopologicalSort();
+        return topologicallySortedModuleNames
+               .Where(moduleName => moduleName != RootModule.Name)
+               .Select(moduleName => (moduleByModuleName[moduleName], resolvedVersionSpecifierByModuleName[moduleName]));
     }
 
     private static ModuleGraph GraphFromModuleForNames(Dictionary<string, Module> modulesForNames) {
@@ -202,11 +90,8 @@ public class Resolver {
     private static string GetModuleNameFromProject(string project) {
         return project.Split('/')[1];
     }
-    
-    public Module RootModule { get; }
 
-    private LockDocument LockDocument { get; set; }
-    private Dictionary<string, string> LockedRevisionsByModuleName { get; set; }
+    public Module RootModule { get; }
 }
 
 }

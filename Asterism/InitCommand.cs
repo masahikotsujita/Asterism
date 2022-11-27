@@ -16,22 +16,13 @@ internal class InitCommand {
         var context = new Context(workingDirectoryPath);
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
-        var rootModule = new Module(context, rootModuleName, workingDirectoryPath, true);
-        rootModule.LoadSpecFile();
-
-        rootModule.IsFetched = true;
+        var rootModule = new Module(context, rootModuleName, true);
         context.Caches[rootModule.Name] = rootModule;
 
         var resolver = new Resolver(rootModule);
 
-        resolver.LoadLockFile();
-
-        var allModules = resolver.ResolveVersionsUsingLockFile();
-        if (allModules == null) {
-            return 1;
-        }
-        var modules = allModules.Where(x => x != rootModule);
-
+        var moduleAndVersionSpecifiers = resolver.ResolveVersions().ToList();
+        
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations
                                        .Select(x => new BuildConfiguration(x))
@@ -41,12 +32,13 @@ internal class InitCommand {
             librariesForConfigurations[configuration] = new List<string>();
         }
 
-        foreach (var module in modules) {
-            module.LoadSolutionFile();
-            module.CreatePropertySheet(false, null);
+        foreach (var moduleAndVersionSpecifier in moduleAndVersionSpecifiers) {
+            moduleAndVersionSpecifier.module.EnsureCheckout(moduleAndVersionSpecifier.versionSpecifier);
+            moduleAndVersionSpecifier.module.LoadSolutionFile();
+            moduleAndVersionSpecifier.module.CreatePropertySheet(false, null);
             foreach (var configuration in configurations) {
                 var libraries = librariesForConfigurations[configuration];
-                if (!module.Build(configuration, ref libraries)) {
+                if (!moduleAndVersionSpecifier.module.Build(configuration, ref libraries)) {
                     return 1;
                 }
             }
@@ -54,7 +46,7 @@ internal class InitCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        context.Dependencies = modules.ToList();
+        context.Dependencies = moduleAndVersionSpecifiers.ToList();
         context.SaveLockFile();
 
         return 0;

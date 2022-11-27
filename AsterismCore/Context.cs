@@ -24,14 +24,14 @@ public class Context {
 
     public Dictionary<string, Module> Caches { get; }
 
-    public List<Module> Dependencies { get; set; }
+    public List<(Module module, VersionSpecifier versionSpecifier)> Dependencies { get; set; }
 
     public void SaveLockFile() {
         var lockDocument = new LockDocument {
             Dependencies = (from dependency in Dependencies
                             select new DependencyInLock() {
-                                Project = Caches[dependency.Name].ProjectPath,
-                                Revision = dependency.Repository.Head.Tip.Sha
+                                Project = dependency.module.ProjectPath,
+                                Revision = dependency.module.GetSha1(dependency.versionSpecifier)
                             }).ToList()
         };
         var serializer = new SerializerBuilder()
