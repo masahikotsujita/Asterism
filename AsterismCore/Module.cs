@@ -131,6 +131,9 @@ public class Module {
     }
 
     public void LoadSolutionFile() {
+        if (SpecDocument == null) {
+            LoadSpecFile();
+        }
         SolutionFile = SolutionFile.Parse(SolutionFilePath);
     }
 
