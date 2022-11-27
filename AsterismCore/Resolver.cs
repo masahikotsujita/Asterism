@@ -15,7 +15,7 @@ public class Resolver {
         RootModule = rootModule;
     }
 
-    public Dictionary<string, VersionSpecifier> ResolveVersions() {
+    public Dictionary<string, VersionSpecifier> Resolve() {
         var resolvedVersionSpecifierByModuleName = new Dictionary<string, VersionSpecifier>();
         do {
             var versionConstraintsByModuleName = new Dictionary<string, VersionConstraint>();

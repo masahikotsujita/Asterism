@@ -21,7 +21,7 @@ internal class UpdateCommand {
         context.Caches[rootModule.Name] = rootModule;
 
         var resolver = new Resolver(rootModule);
-        var resolvedVersionSpecifiersByModuleName = resolver.ResolveVersions();
+        var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
 
         var graph = context.GetGraph(rootModule, resolvedVersionSpecifiersByModuleName);
         var moduleAndVersionSpecifiers = graph.TopologicalSort()
