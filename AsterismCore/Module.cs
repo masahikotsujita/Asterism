@@ -247,6 +247,7 @@ public class Module {
                            .WithNamingConvention(UnderscoredNamingConvention.Instance)
                            .Build();
         LockDocument = deserializer.Deserialize<LockDocument>(reader);
+        reader.Close();
     }
 
     private IEnumerable<Requirement> GetLockRequirements() {
