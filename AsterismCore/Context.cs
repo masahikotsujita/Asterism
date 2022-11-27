@@ -1,10 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
+
+public class ModuleGraph : Graph<string> {
+    public ModuleGraph() {
+        IncomingEdgesForNodes = new Dictionary<string, HashSet<string>>();
+    }
+
+    public Dictionary<string, HashSet<string>> IncomingEdgesForNodes { get; }
+}
 
 public class Context {
     public Context(string workingDirectoryPath) {
@@ -40,6 +49,25 @@ public class Context {
         var writer = new StreamWriter(LockFilePath, false);
         serializer.Serialize(writer, lockDocument);
         writer.Flush();
+    }
+
+    public ModuleGraph GetGraph(Module rootModule, Dictionary<string, VersionSpecifier> versionSpecifiersByModuleName) {
+        var graph = new ModuleGraph {
+            IncomingEdgesForNodes = {
+                [rootModule.Name] = new HashSet<string>()
+            }
+        };
+        void GetDependency(Module parentModule) {
+            foreach (var dependency in parentModule.GetRequirements(versionSpecifiersByModuleName.TryGetValue(parentModule.Name, out var parentModuleVersionSpecifier) ? parentModuleVersionSpecifier : VersionSpecifier.Default)) {
+                if (!graph.IncomingEdgesForNodes.TryGetValue(dependency.Module.Name, out _)) {
+                    graph.IncomingEdgesForNodes[dependency.Module.Name] = new HashSet<string>();
+                }
+                graph.IncomingEdgesForNodes[dependency.Module.Name].Add(parentModule.Name);
+                GetDependency(dependency.Module);
+            }
+        }
+        GetDependency(rootModule);
+        return graph;
     }
 }
 

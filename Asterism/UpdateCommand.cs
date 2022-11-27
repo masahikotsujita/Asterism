@@ -16,12 +16,18 @@ internal class UpdateCommand {
         var context = new Context(workingDirectoryPath);
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
-        var rootModule = new Module(context,  rootModuleName, false);
-        
+        var rootModule = new Module(context, rootModuleName, false);
+
         context.Caches[rootModule.Name] = rootModule;
 
         var resolver = new Resolver(rootModule);
-        var moduleAndVersionSpecifiers = resolver.ResolveVersions().ToList();
+        var resolvedVersionSpecifiersByModuleName = resolver.ResolveVersions();
+
+        var graph = context.GetGraph(rootModule, resolvedVersionSpecifiersByModuleName);
+        var moduleAndVersionSpecifiers = graph.TopologicalSort()
+                                              .Where(moduleName => moduleName != rootModuleName)
+                                              .Select(moduleName => (module: context.Caches[moduleName], versionSpecifier: resolvedVersionSpecifiersByModuleName[moduleName]))
+                                              .ToList();
 
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations
@@ -31,7 +37,7 @@ internal class UpdateCommand {
         foreach (var configuration in configurations) {
             librariesForConfigurations[configuration] = new List<string>();
         }
-        
+
         foreach (var moduleAndVersionSpecifier in moduleAndVersionSpecifiers) {
             moduleAndVersionSpecifier.module.EnsureCheckout(moduleAndVersionSpecifier.versionSpecifier);
             moduleAndVersionSpecifier.module.LoadSolutionFile();

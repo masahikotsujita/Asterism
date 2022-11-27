@@ -21,7 +21,10 @@ internal class InitCommand {
 
         var resolver = new Resolver(rootModule);
 
-        var moduleAndVersionSpecifiers = resolver.ResolveVersions().ToList();
+        var resolvedVersionSpecifiersByModuleName = resolver.ResolveVersions();
+        var pinnedDependencies = rootModule.GetRequirements(VersionSpecifier.Default);
+        var moduleAndVersionSpecifiers = pinnedDependencies
+            .Select(requirement => (module: requirement.Module, versionSpecifier: resolvedVersionSpecifiersByModuleName[requirement.Module.Name]));
         
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations
