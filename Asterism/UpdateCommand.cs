@@ -16,15 +16,18 @@ internal class UpdateCommand {
         var context = new Context(workingDirectoryPath);
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
-        var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
-        rootModule.LoadSpecFile();
+        var rootModule = new Module(context, rootModuleName, false);
 
-        var graph = new ModuleManager(context, rootModule);
-        var allModules = graph.ResolveVersions();
-        if (allModules == null) {
-            return 1;
-        }
-        var modules = allModules.Where(x => x != rootModule);
+        context.Caches[rootModule.Name] = rootModule;
+
+        var resolver = new Resolver(rootModule);
+        var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
+
+        var graph = context.GetGraph(rootModule, resolvedVersionSpecifiersByModuleName);
+        var moduleAndVersionSpecifiers = graph.TopologicalSort()
+                                              .Where(moduleName => moduleName != rootModuleName)
+                                              .Select(moduleName => (module: context.Caches[moduleName], versionSpecifier: resolvedVersionSpecifiersByModuleName[moduleName]))
+                                              .ToList();
 
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations
@@ -35,12 +38,13 @@ internal class UpdateCommand {
             librariesForConfigurations[configuration] = new List<string>();
         }
 
-        foreach (var module in modules) {
-            module.LoadSolutionFile();
-            module.CreatePropertySheet(false, null);
+        foreach (var moduleAndVersionSpecifier in moduleAndVersionSpecifiers) {
+            moduleAndVersionSpecifier.module.EnsureCheckout(moduleAndVersionSpecifier.versionSpecifier);
+            moduleAndVersionSpecifier.module.LoadSolutionFile();
+            moduleAndVersionSpecifier.module.CreatePropertySheet(false, null);
             foreach (var configuration in configurations) {
                 var libraries = librariesForConfigurations[configuration];
-                if (!module.Build(configuration, ref libraries)) {
+                if (!moduleAndVersionSpecifier.module.Build(configuration, ref libraries)) {
                     return 1;
                 }
             }
@@ -48,8 +52,8 @@ internal class UpdateCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        graph.Dependencies = modules.ToList();
-        graph.SaveLockFile();
+        context.Dependencies = moduleAndVersionSpecifiers;
+        context.SaveLockFile();
 
         return 0;
     }

@@ -16,19 +16,16 @@ internal class InitCommand {
         var context = new Context(workingDirectoryPath);
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
-        var rootModule = new Module(context, rootModuleName, workingDirectoryPath);
-        rootModule.LoadSpecFile();
+        var rootModule = new Module(context, rootModuleName, true);
+        context.Caches[rootModule.Name] = rootModule;
 
-        var graph = new ModuleManager(context, rootModule);
+        var resolver = new Resolver(rootModule);
 
-        graph.LoadLockFile();
-
-        var allModules = graph.ResolveVersionsUsingLockFile();
-        if (allModules == null) {
-            return 1;
-        }
-        var modules = allModules.Where(x => x != rootModule);
-
+        var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
+        var pinnedDependencies = rootModule.GetRequirements(VersionSpecifier.Default);
+        var moduleAndVersionSpecifiers = pinnedDependencies
+            .Select(requirement => (module: requirement.Module, versionSpecifier: resolvedVersionSpecifiersByModuleName[requirement.Module.Name]));
+        
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations
                                        .Select(x => new BuildConfiguration(x))
@@ -38,12 +35,13 @@ internal class InitCommand {
             librariesForConfigurations[configuration] = new List<string>();
         }
 
-        foreach (var module in modules) {
-            module.LoadSolutionFile();
-            module.CreatePropertySheet(false, null);
+        foreach (var moduleAndVersionSpecifier in moduleAndVersionSpecifiers) {
+            moduleAndVersionSpecifier.module.EnsureCheckout(moduleAndVersionSpecifier.versionSpecifier);
+            moduleAndVersionSpecifier.module.LoadSolutionFile();
+            moduleAndVersionSpecifier.module.CreatePropertySheet(false, null);
             foreach (var configuration in configurations) {
                 var libraries = librariesForConfigurations[configuration];
-                if (!module.Build(configuration, ref libraries)) {
+                if (!moduleAndVersionSpecifier.module.Build(configuration, ref libraries)) {
                     return 1;
                 }
             }
@@ -51,8 +49,8 @@ internal class InitCommand {
 
         rootModule.CreatePropertySheet(true, librariesForConfigurations);
 
-        graph.Dependencies = modules.ToList();
-        graph.SaveLockFile();
+        context.Dependencies = moduleAndVersionSpecifiers.ToList();
+        context.SaveLockFile();
 
         return 0;
     }
