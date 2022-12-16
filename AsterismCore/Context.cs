@@ -58,7 +58,7 @@ public class Context {
             }
         };
         void GetDependency(Module parentModule) {
-            foreach (var dependency in parentModule.GetRequirements(versionSpecifiersByModuleName.TryGetValue(parentModule.Name, out var parentModuleVersionSpecifier) ? parentModuleVersionSpecifier : VersionSpecifier.Default)) {
+            foreach (var dependency in parentModule.GetRequirements(versionSpecifiersByModuleName.TryGetValue(parentModule.Name, out var parentModuleVersionSpecifier) ? parentModuleVersionSpecifier : default)) {
                 if (!graph.IncomingEdgesForNodes.TryGetValue(dependency.Module.Name, out _)) {
                     graph.IncomingEdgesForNodes[dependency.Module.Name] = new HashSet<string>();
                 }

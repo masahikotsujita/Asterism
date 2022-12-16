@@ -19,10 +19,10 @@ internal class InitCommand {
         var rootModule = new Module(context, rootModuleName, true);
         context.Caches[rootModule.Name] = rootModule;
 
-        var resolver = new Resolver(rootModule);
+        var resolver = new Resolver<Module, string, VersionSpecifier, VersionConstraint>(rootModule);
 
         var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
-        var pinnedDependencies = rootModule.GetRequirements(VersionSpecifier.Default);
+        var pinnedDependencies = rootModule.GetRequirements(default);
         var moduleAndVersionSpecifiers = pinnedDependencies
             .Select(requirement => (module: requirement.Module, versionSpecifier: resolvedVersionSpecifiersByModuleName[requirement.Module.Name]));
         

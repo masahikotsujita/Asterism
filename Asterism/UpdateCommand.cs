@@ -20,7 +20,7 @@ internal class UpdateCommand {
 
         context.Caches[rootModule.Name] = rootModule;
 
-        var resolver = new Resolver(rootModule);
+        var resolver = new Resolver<Module, string, VersionSpecifier, VersionConstraint>(rootModule);
         var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
 
         var graph = context.GetGraph(rootModule, resolvedVersionSpecifiersByModuleName);

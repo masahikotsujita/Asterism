@@ -1,25 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using LibGit2Sharp;
-using SemanticVersioning;
-using YamlDotNet.Serialization;
-using Version = SemanticVersioning.Version;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
 
-public class Resolver {
-    public Resolver(Module rootModule) {
+public class Resolver<TDependency, TKey, TVersion, TRange>
+    where TDependency : IDependency<TDependency, TKey, TVersion, TRange>
+    where TRange : IRange<TRange>
+    where TVersion : IEquatable<TVersion> {
+    public Resolver(TDependency rootModule) {
         RootModule = rootModule;
     }
 
-    public Dictionary<string, VersionSpecifier> Resolve() {
-        var resolvedVersionSpecifierByModuleName = new Dictionary<string, VersionSpecifier>();
+    public Dictionary<TKey, TVersion> Resolve() {
+        var resolvedVersionSpecifierByModuleName = new Dictionary<TKey, TVersion>();
         do {
-            var versionConstraintsByModuleName = new Dictionary<string, VersionConstraint>();
-            void GetDependencies(Module parentModule, VersionSpecifier parentModuleVersionSpecifier) {
+            var versionConstraintsByModuleName = new Dictionary<TKey, TRange>();
+            void GetDependencies(TDependency parentModule, TVersion parentModuleVersionSpecifier) {
                 foreach (var requirement in parentModule.GetRequirements(parentModuleVersionSpecifier)) {
                     // get dependencies for dependencies recursively...
                     if (versionConstraintsByModuleName.TryGetValue(requirement.Module.Name, out var existingVersionConstraint)) {
@@ -31,7 +27,7 @@ public class Resolver {
                     if (requirement.Module.GetMaxSatisfyingVersionForConstraint(versionConstraint) is not { } requirementVersionSpecifier) {
                         throw new Exception($"Requirement (module: {requirement.Module.Name} version: {requirement.VersionConstraint}) in module {parentModule.Name} cannot be satisfied.");
                     }
-                    if (resolvedVersionSpecifierByModuleName.TryGetValue(requirement.Module.Name, out var resolvedVersionSpecifier) && resolvedVersionSpecifier != requirementVersionSpecifier) {
+                    if (resolvedVersionSpecifierByModuleName.TryGetValue(requirement.Module.Name, out var resolvedVersionSpecifier) && !resolvedVersionSpecifier.Equals(requirementVersionSpecifier)) {
                         resolvedVersionSpecifierByModuleName[requirement.Module.Name] = requirementVersionSpecifier;
                         // pinned version was updated by narrower range, so try again from the beginning
                         continue;
@@ -41,13 +37,13 @@ public class Resolver {
                     }
                 }
             }
-            GetDependencies(RootModule, VersionSpecifier.Default);
+            GetDependencies(RootModule, default);
             break;
         } while (true);
         return resolvedVersionSpecifierByModuleName;
     }
 
-    public Module RootModule { get; }
+    public TDependency RootModule { get; init; }
 }
 
 }
