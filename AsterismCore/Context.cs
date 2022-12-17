@@ -54,16 +54,16 @@ public class Context {
     public ModuleGraph GetGraph(Module rootModule, Dictionary<string, VersionSpecifier> versionSpecifiersByModuleName) {
         var graph = new ModuleGraph {
             IncomingEdgesForNodes = {
-                [rootModule.Name] = new HashSet<string>()
+                [rootModule.Key] = new HashSet<string>()
             }
         };
         void GetDependency(Module parentModule) {
-            foreach (var dependency in parentModule.GetRequirements(versionSpecifiersByModuleName.TryGetValue(parentModule.Name, out var parentModuleVersionSpecifier) ? parentModuleVersionSpecifier : default)) {
-                if (!graph.IncomingEdgesForNodes.TryGetValue(dependency.Module.Name, out _)) {
-                    graph.IncomingEdgesForNodes[dependency.Module.Name] = new HashSet<string>();
+            foreach (var (dependency, _) in parentModule.GetDependencies(versionSpecifiersByModuleName.TryGetValue(parentModule.Key, out var parentModuleVersionSpecifier) ? parentModuleVersionSpecifier : default)) {
+                if (!graph.IncomingEdgesForNodes.TryGetValue(dependency.Key, out _)) {
+                    graph.IncomingEdgesForNodes[dependency.Key] = new HashSet<string>();
                 }
-                graph.IncomingEdgesForNodes[dependency.Module.Name].Add(parentModule.Name);
-                GetDependency(dependency.Module);
+                graph.IncomingEdgesForNodes[dependency.Key].Add(parentModule.Key);
+                GetDependency(dependency);
             }
         }
         GetDependency(rootModule);

@@ -96,7 +96,7 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
         Context = context;
         IsRoot = true;
         IsLockMode = isLockMode;
-        Name = name;
+        Key = name;
         CheckoutDirectoryPath = context.WorkingDirectoryPath;
     }
 
@@ -106,7 +106,7 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
         IsLockMode = isLockMode;
         ProjectPath = projectPath;
         var moduleName = GetModuleNameFromProject(projectPath);
-        Name = moduleName;
+        Key = moduleName;
         CheckoutDirectoryPath = Path.Combine(context.CheckoutDirectoryPath, moduleName);
         if (!Directory.Exists(CheckoutDirectoryPath)) {
             var githubPath = $"https://github.com/{projectPath}.git";
@@ -211,9 +211,9 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
         }
     }
 
-    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetSpecRequirements() {
+    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetSpecDependencies() {
         LoadSpecFile();
-        var requirements = new List<(Module Module, VersionConstraint VersionConstraint)>();
+        var dependencies = new List<(Module Module, VersionConstraint VersionConstraint)>();
         if (SpecDocument.Dependencies != null) {
             foreach (var dependency in SpecDocument.Dependencies) {
                 var moduleName = GetModuleNameFromProject(dependency.Project);
@@ -222,13 +222,13 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
                     module = new Module(Context, false, IsLockMode, dependency.Project);
                     Context.Caches[moduleName] = module;
                 }
-                requirements.Add((Module: module, VersionConstraint: new VersionConstraint {
+                dependencies.Add((Module: module, VersionConstraint: new VersionConstraint {
                     Type = VersionConstraintType.Range,
                     Range = range
                 }));
             }
         }
-        return requirements;
+        return dependencies;
     }
 
     private void EnsureLoadLockFile() {
@@ -246,11 +246,11 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
         reader.Close();
     }
 
-    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetLockRequirements() {
+    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetLockDependencies() {
         if (LockDocument == null) {
             EnsureLoadLockFile();
         }
-        var requirements = new List<(Module Module, VersionConstraint VersionConstraint)>();
+        var dependencies = new List<(Module Module, VersionConstraint VersionConstraint)>();
         foreach (var dependency in LockDocument.Dependencies) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             var sha1 = dependency.Revision;
@@ -258,30 +258,30 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
                 module = new Module(Context, false, IsLockMode, dependency.Project);
                 Context.Caches[moduleName] = module;
             }
-            requirements.Add((Module: module, VersionConstraint: new VersionConstraint {
+            dependencies.Add((Module: module, VersionConstraint: new VersionConstraint {
                 Type = VersionConstraintType.Sha1,
                 Sha1 = sha1
             }));
         }
-        return requirements;
+        return dependencies;
     }
 
-    public IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetRequirements(VersionSpecifier versionSpecifier) {
+    public IEnumerable<(Module dependency, VersionConstraint range)> GetDependencies(VersionSpecifier versionSpecifier) {
         if (IsRoot) {
             Debug.Assert(versionSpecifier.Type == VersionSpecifierType.Default);
             if (!IsLockMode) {
-                return GetSpecRequirements();
+                return GetSpecDependencies();
             }
-            return GetLockRequirements();
+            return GetLockDependencies();
         }
         EnsureCheckout(versionSpecifier);
         if (!IsLockMode) {
-            return GetSpecRequirements();
+            return GetSpecDependencies();
         }
         return new List<(Module Module, VersionConstraint VersionConstraint)>();
     }
 
-    public VersionSpecifier GetMaxSatisfyingVersionForConstraint(VersionConstraint constraint) {
+    public VersionSpecifier GetMaxSatisfyingVersionForRange(VersionConstraint constraint) {
         switch (constraint.Type) {
         case VersionConstraintType.Range:
             var maxSatisfyingVersionString = constraint.Range
@@ -347,7 +347,7 @@ public class Module : IDependency<Module, string, VersionSpecifier, VersionConst
 
     private Context Context { get; }
 
-    public string Name { get; }
+    public string Key { get; }
 
     private string CheckoutDirectoryPath { get; }
 

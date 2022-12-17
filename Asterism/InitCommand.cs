@@ -17,14 +17,14 @@ internal class InitCommand {
 
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
         var rootModule = new Module(context, rootModuleName, true);
-        context.Caches[rootModule.Name] = rootModule;
+        context.Caches[rootModule.Key] = rootModule;
 
         var resolver = new Resolver<Module, string, VersionSpecifier, VersionConstraint>(rootModule);
 
         var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
-        var pinnedDependencies = rootModule.GetRequirements(default);
+        var pinnedDependencies = rootModule.GetDependencies(default);
         var moduleAndVersionSpecifiers = pinnedDependencies
-            .Select(requirement => (module: requirement.Module, versionSpecifier: resolvedVersionSpecifiersByModuleName[requirement.Module.Name]));
+            .Select(tuple => (module: tuple.dependency, versionSpecifier: resolvedVersionSpecifiersByModuleName[tuple.dependency.Key]));
         
         rootModule.LoadSolutionFile();
         var configurations = rootModule.SolutionFile.SolutionConfigurations

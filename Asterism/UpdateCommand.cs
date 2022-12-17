@@ -18,7 +18,7 @@ internal class UpdateCommand {
         var rootModuleName = Path.GetFileName(Path.GetFullPath(workingDirectoryPath));
         var rootModule = new Module(context, rootModuleName, false);
 
-        context.Caches[rootModule.Name] = rootModule;
+        context.Caches[rootModule.Key] = rootModule;
 
         var resolver = new Resolver<Module, string, VersionSpecifier, VersionConstraint>(rootModule);
         var resolvedVersionSpecifiersByModuleName = resolver.Resolve();
