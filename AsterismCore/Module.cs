@@ -27,7 +27,12 @@ public struct VersionSpecifier : IEquatable<VersionSpecifier> {
         return HashCode.Combine((int)Type, Version, Sha1);
     }
 
-    public static VersionSpecifier Default => new() { Type = VersionSpecifierType.Default };
+    public VersionSpecifier() {
+        Type = VersionSpecifierType.Default;
+        Version = null;
+        Sha1 = null;
+    }
+    
     public VersionSpecifierType Type { get; set; }
     public Version Version { get; set; }
     public string Sha1 { get; set; }
@@ -62,7 +67,7 @@ public enum VersionConstraintType {
     Sha1
 }
 
-public struct VersionConstraint {
+public struct VersionConstraint : IRange<VersionConstraint> {
     public VersionConstraintType Type { get; set; }
     public Range Range { get; set; }
     public string Sha1 { get; set; }
@@ -85,18 +90,13 @@ public struct VersionConstraint {
     }
 }
 
-public struct Requirement {
-    public Module Module { get; set; }
-    public VersionConstraint VersionConstraint { get; set; }
-}
-
-public class Module {
+public class Module : IDependency<Module, string, VersionSpecifier, VersionConstraint> {
 
     public Module(Context context, string name, bool isLockMode) {
         Context = context;
         IsRoot = true;
         IsLockMode = isLockMode;
-        Name = name;
+        Key = name;
         CheckoutDirectoryPath = context.WorkingDirectoryPath;
     }
 
@@ -106,7 +106,7 @@ public class Module {
         IsLockMode = isLockMode;
         ProjectPath = projectPath;
         var moduleName = GetModuleNameFromProject(projectPath);
-        Name = moduleName;
+        Key = moduleName;
         CheckoutDirectoryPath = Path.Combine(context.CheckoutDirectoryPath, moduleName);
         if (!Directory.Exists(CheckoutDirectoryPath)) {
             var githubPath = $"https://github.com/{projectPath}.git";
@@ -211,9 +211,9 @@ public class Module {
         }
     }
 
-    private IEnumerable<Requirement> GetSpecRequirements() {
+    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetSpecDependencies() {
         LoadSpecFile();
-        var requirements = new List<Requirement>();
+        var dependencies = new List<(Module Module, VersionConstraint VersionConstraint)>();
         if (SpecDocument.Dependencies != null) {
             foreach (var dependency in SpecDocument.Dependencies) {
                 var moduleName = GetModuleNameFromProject(dependency.Project);
@@ -222,17 +222,13 @@ public class Module {
                     module = new Module(Context, false, IsLockMode, dependency.Project);
                     Context.Caches[moduleName] = module;
                 }
-                var requirement = new Requirement {
-                    Module = module,
-                    VersionConstraint = new VersionConstraint {
-                        Type = VersionConstraintType.Range,
-                        Range = range
-                    }
-                };
-                requirements.Add(requirement);
+                dependencies.Add((Module: module, VersionConstraint: new VersionConstraint {
+                    Type = VersionConstraintType.Range,
+                    Range = range
+                }));
             }
         }
-        return requirements;
+        return dependencies;
     }
 
     private void EnsureLoadLockFile() {
@@ -250,11 +246,11 @@ public class Module {
         reader.Close();
     }
 
-    private IEnumerable<Requirement> GetLockRequirements() {
+    private IEnumerable<(Module Module, VersionConstraint VersionConstraint)> GetLockDependencies() {
         if (LockDocument == null) {
             EnsureLoadLockFile();
         }
-        var requirements = new List<Requirement>();
+        var dependencies = new List<(Module Module, VersionConstraint VersionConstraint)>();
         foreach (var dependency in LockDocument.Dependencies) {
             var moduleName = GetModuleNameFromProject(dependency.Project);
             var sha1 = dependency.Revision;
@@ -262,40 +258,36 @@ public class Module {
                 module = new Module(Context, false, IsLockMode, dependency.Project);
                 Context.Caches[moduleName] = module;
             }
-            var requirement = new Requirement {
-                Module = module,
-                VersionConstraint = new VersionConstraint {
-                    Type = VersionConstraintType.Sha1,
-                    Sha1 = sha1
-                }
-            };
-            requirements.Add(requirement);
+            dependencies.Add((Module: module, VersionConstraint: new VersionConstraint {
+                Type = VersionConstraintType.Sha1,
+                Sha1 = sha1
+            }));
         }
-        return requirements;
+        return dependencies;
     }
 
-    public IEnumerable<Requirement> GetRequirements(VersionSpecifier versionSpecifier) {
+    public IEnumerable<(Module dependency, VersionConstraint range)> GetDependencies(VersionSpecifier versionSpecifier) {
         if (IsRoot) {
             Debug.Assert(versionSpecifier.Type == VersionSpecifierType.Default);
             if (!IsLockMode) {
-                return GetSpecRequirements();
+                return GetSpecDependencies();
             }
-            return GetLockRequirements();
+            return GetLockDependencies();
         }
         EnsureCheckout(versionSpecifier);
         if (!IsLockMode) {
-            return GetSpecRequirements();
+            return GetSpecDependencies();
         }
-        return new List<Requirement>();
+        return new List<(Module Module, VersionConstraint VersionConstraint)>();
     }
 
-    public VersionSpecifier? GetMaxSatisfyingVersionForConstraint(VersionConstraint constraint) {
+    public VersionSpecifier GetMaxSatisfyingVersionForRange(VersionConstraint constraint) {
         switch (constraint.Type) {
         case VersionConstraintType.Range:
             var maxSatisfyingVersionString = constraint.Range
                                                        .MaxSatisfying(Repository.Tags.Select(tag => tag.FriendlyName), true, true);
             if (maxSatisfyingVersionString == null) {
-                return null;
+                throw new Exception("Failed to satisfy version requirement.");
             }
             return new VersionSpecifier {
                 Type = VersionSpecifierType.Version,
@@ -355,7 +347,7 @@ public class Module {
 
     private Context Context { get; }
 
-    public string Name { get; }
+    public string Key { get; }
 
     private string CheckoutDirectoryPath { get; }
 

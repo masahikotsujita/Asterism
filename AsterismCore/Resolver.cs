@@ -1,53 +1,49 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using LibGit2Sharp;
-using SemanticVersioning;
-using YamlDotNet.Serialization;
-using Version = SemanticVersioning.Version;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace AsterismCore {
 
-public class Resolver {
-    public Resolver(Module rootModule) {
-        RootModule = rootModule;
+public class Resolver<TDependency, TKey, TVersion, TRange>
+    where TDependency : IDependency<TDependency, TKey, TVersion, TRange>
+    where TRange : IRange<TRange>
+    where TVersion : IEquatable<TVersion> {
+    public Resolver(TDependency dependency) {
+        Dependency = dependency;
     }
 
-    public Dictionary<string, VersionSpecifier> Resolve() {
-        var resolvedVersionSpecifierByModuleName = new Dictionary<string, VersionSpecifier>();
+    public Dictionary<TKey, TVersion> Resolve() {
+        var resolvedVersionsByKey = new Dictionary<TKey, TVersion>();
         do {
-            var versionConstraintsByModuleName = new Dictionary<string, VersionConstraint>();
-            void GetDependencies(Module parentModule, VersionSpecifier parentModuleVersionSpecifier) {
-                foreach (var requirement in parentModule.GetRequirements(parentModuleVersionSpecifier)) {
+            var knownVersionRangesByKey = new Dictionary<TKey, TRange>();
+            void GetDependencies(TDependency parent, TVersion parentVersion) {
+                foreach (var (dependency, dependencyVersionRangeByParent) in parent.GetDependencies(parentVersion)) {
                     // get dependencies for dependencies recursively...
-                    if (versionConstraintsByModuleName.TryGetValue(requirement.Module.Name, out var existingVersionConstraint)) {
-                        versionConstraintsByModuleName[requirement.Module.Name] = existingVersionConstraint.Intersect(requirement.VersionConstraint);
+                    if (knownVersionRangesByKey.TryGetValue(dependency.Key, out var existingRange)) {
+                        knownVersionRangesByKey[dependency.Key] = existingRange.Intersect(dependencyVersionRangeByParent);
                     } else {
-                        versionConstraintsByModuleName[requirement.Module.Name] = requirement.VersionConstraint;
+                        knownVersionRangesByKey[dependency.Key] = dependencyVersionRangeByParent;
                     }
-                    var versionConstraint = versionConstraintsByModuleName[requirement.Module.Name];
-                    if (requirement.Module.GetMaxSatisfyingVersionForConstraint(versionConstraint) is not { } requirementVersionSpecifier) {
-                        throw new Exception($"Requirement (module: {requirement.Module.Name} version: {requirement.VersionConstraint}) in module {parentModule.Name} cannot be satisfied.");
+                    var dependencyVersionRange = knownVersionRangesByKey[dependency.Key];
+                    if (dependency.GetMaxSatisfyingVersionForRange(dependencyVersionRange) is not { } satisfiedVersion) {
+                        throw new Exception($"Requirement (module: {dependency.Key} version: {dependencyVersionRangeByParent}) in module {parent.Key} cannot be satisfied.");
                     }
-                    if (resolvedVersionSpecifierByModuleName.TryGetValue(requirement.Module.Name, out var resolvedVersionSpecifier) && resolvedVersionSpecifier != requirementVersionSpecifier) {
-                        resolvedVersionSpecifierByModuleName[requirement.Module.Name] = requirementVersionSpecifier;
+                    if (resolvedVersionsByKey.TryGetValue(dependency.Key, out var resolvedVersion) && !resolvedVersion.Equals(satisfiedVersion)) {
+                        resolvedVersionsByKey[dependency.Key] = satisfiedVersion;
                         // pinned version was updated by narrower range, so try again from the beginning
                         continue;
                     } else {
-                        resolvedVersionSpecifierByModuleName[requirement.Module.Name] = requirementVersionSpecifier;
-                        GetDependencies(requirement.Module, requirementVersionSpecifier);
+                        resolvedVersionsByKey[dependency.Key] = satisfiedVersion;
+                        GetDependencies(dependency, satisfiedVersion);
                     }
                 }
             }
-            GetDependencies(RootModule, VersionSpecifier.Default);
+            GetDependencies(Dependency, default);
             break;
         } while (true);
-        return resolvedVersionSpecifierByModuleName;
+        return resolvedVersionsByKey;
     }
 
-    public Module RootModule { get; }
+    public TDependency Dependency { get; init; }
 }
 
 }
