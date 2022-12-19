@@ -15,7 +15,7 @@ public class Resolver<TDependency, TKey, TVersion, TRange>
         var resolvedVersionsByKey = new Dictionary<TKey, TVersion>();
         do {
             var knownVersionRangesByKey = new Dictionary<TKey, TRange>();
-            void GetDependencies(TDependency parent, TVersion parentVersion) {
+            bool GetDependencies(TDependency parent, TVersion parentVersion) {
                 foreach (var (dependency, dependencyVersionRangeByParent) in parent.GetDependencies(parentVersion)) {
                     // get dependencies for dependencies recursively...
                     if (knownVersionRangesByKey.TryGetValue(dependency.Key, out var existingRange)) {
@@ -30,15 +30,18 @@ public class Resolver<TDependency, TKey, TVersion, TRange>
                     if (resolvedVersionsByKey.TryGetValue(dependency.Key, out var resolvedVersion) && !resolvedVersion.Equals(satisfiedVersion)) {
                         resolvedVersionsByKey[dependency.Key] = satisfiedVersion;
                         // pinned version was updated by narrower range, so try again from the beginning
-                        continue;
-                    } else {
-                        resolvedVersionsByKey[dependency.Key] = satisfiedVersion;
-                        GetDependencies(dependency, satisfiedVersion);
+                        return false;
+                    }
+                    resolvedVersionsByKey[dependency.Key] = satisfiedVersion;
+                    if (!GetDependencies(dependency, satisfiedVersion)) {
+                        return false;
                     }
                 }
+                return true;
             }
-            GetDependencies(Dependency, default);
-            break;
+            if (GetDependencies(Dependency, default)) {
+                break;
+            }
         } while (true);
         return resolvedVersionsByKey;
     }
